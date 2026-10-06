@@ -1,6 +1,6 @@
 # FramaShare
 
-    this is a test for permission right's ah
+    this is a test for permission right's
 
 
     
