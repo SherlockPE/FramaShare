@@ -1,0 +1,6 @@
+
+Running 1 test using 1 worker
+
+  ✓  1 tests/flows.e2e.ts:20:1 › album order supports drag and drop as well as keyboard buttons (1.6s)
+
+  1 passed (2.4s)
