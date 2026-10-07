@@ -3,7 +3,7 @@
 import { ref, shallowRef, onBeforeUnmount, watch, nextTick, computed, onMounted } from 'vue';
 import { getDocument, GlobalWorkerOptions, TextLayer, type PDFDocumentProxy, type RenderTask } from 'pdfjs-dist';
 import worker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-import { ChevronLeft, ChevronRight, PanelLeft, Search, RotateCw, ZoomIn, ZoomOut, X } from 'lucide-vue-next';
+import { ChevronLeft, ChevronRight, PanelLeft, Search, RotateCw, ZoomIn, ZoomOut, X } from '@lucide/vue';
 
 GlobalWorkerOptions.workerSrc = worker;
 const props = defineProps<{ source: string; initialPage: number }>();

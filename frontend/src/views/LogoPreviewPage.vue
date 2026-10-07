@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { Upload } from "lucide-vue-next";
+import { Upload } from "@lucide/vue";
 const selected = ref(0);
 const options = [
   {

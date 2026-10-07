@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { BookOpen, Plus, Copy, ArrowLeft, Link, Download } from "lucide-vue-next";
+import { BookOpen, Plus, Copy, ArrowLeft, Link, Download } from "@lucide/vue";
 import UiModal from "../components/UiModal.vue";
 import UiMenu from "../components/UiMenu.vue";
 import LinkEditor from "../components/LinkEditor.vue";

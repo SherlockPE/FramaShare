@@ -9,7 +9,7 @@ import {
   ArrowLeft,
   Copy,
   Download,
-} from "lucide-vue-next";
+} from "@lucide/vue";
 import {
   state,
   currentUser,

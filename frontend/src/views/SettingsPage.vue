@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { User, Lock, HardDrive, LogOut, Trash2, Eye, EyeOff } from "lucide-vue-next";
+import { User, Lock, HardDrive, LogOut, Trash2, Eye, EyeOff } from "@lucide/vue";
 import UiModal from "../components/UiModal.vue";
 import {
   state,

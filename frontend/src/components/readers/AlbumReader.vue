@@ -1,7 +1,7 @@
 <script setup lang="ts">
 
 import {ref,computed,watch,onMounted,onBeforeUnmount} from 'vue';
-import {ChevronLeft,ChevronRight,ZoomIn,ZoomOut,RotateCcw,PanelLeft,X} from 'lucide-vue-next';
+import {ChevronLeft,ChevronRight,ZoomIn,ZoomOut,RotateCcw,PanelLeft,X} from '@lucide/vue';
 import {imageSource,type Publication} from '../../services/store';
 
 const props=defineProps<{publication:Publication}>();

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from "vue";
-import { ChevronLeft, ChevronRight, List, Settings2, X } from "lucide-vue-next";
+import { ChevronLeft, ChevronRight, List, Settings2, X } from "@lucide/vue";
 import { state } from "../../services/store";
 const props = defineProps<{ initialPage: number; sample: boolean }>();
 const emit = defineEmits<{ position: [value: number] }>();

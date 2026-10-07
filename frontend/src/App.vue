@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { BookOpen, Menu, X, Upload, Library, Shield, UserRound } from "lucide-vue-next";
+import { BookOpen, Menu, X, Upload, Library, Shield, UserRound } from "@lucide/vue";
 import UiMenu from "./components/UiMenu.vue";
 import { currentUser, state, ui, notify } from "./services/store";
 const route = useRoute(),

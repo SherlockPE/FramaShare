@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { BookOpen, Eye, EyeOff, ArrowLeft, Check, Mail } from "lucide-vue-next";
+import { BookOpen, Eye, EyeOff, ArrowLeft, Check, Mail } from "@lucide/vue";
 import { delay, signIn, notify } from "../services/store";
 const route = useRoute(),
   router = useRouter(),

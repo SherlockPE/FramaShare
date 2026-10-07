@@ -9,7 +9,7 @@ import {
   BookOpen,
   SlidersHorizontal,
   ArrowUpDown,
-} from "lucide-vue-next";
+} from "@lucide/vue";
 import UiMenu from "../components/UiMenu.vue";
 import UiModal from "../components/UiModal.vue";
 import PublicationCover from "../components/PublicationCover.vue";

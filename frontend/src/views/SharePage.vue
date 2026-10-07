@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { BookOpen, LockKeyhole, Eye, EyeOff, Link2Off } from "lucide-vue-next";
+import { BookOpen, LockKeyhole, Eye, EyeOff, Link2Off } from "@lucide/vue";
 import {
   state,
   currentUser,

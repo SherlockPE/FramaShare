@@ -13,7 +13,7 @@ import {
   ArrowLeft,
   Check,
   ChevronRight,
-} from "lucide-vue-next";
+} from "@lucide/vue";
 const route = useRoute(),
   query = ref(""),
   category = ref("All topics");

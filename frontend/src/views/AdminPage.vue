@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ArrowLeft, ShieldCheck, Search, ExternalLink, Trash2 } from 'lucide-vue-next';
+import { ArrowLeft, ShieldCheck, Search, ExternalLink, Trash2 } from '@lucide/vue';
 import UiModal from '../components/UiModal.vue';
 import { state, deleteDocument, notify, delay, formatSize, formatDate, usage, type Publication } from '../services/store';
 const route=useRoute(), router=useRouter();

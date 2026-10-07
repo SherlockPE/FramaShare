@@ -10,7 +10,7 @@ import {
   Flag,
   Link2Off,
   Eye,
-} from "lucide-vue-next";
+} from "@lucide/vue";
 import PdfReader from "../components/readers/PdfReader.vue";
 import EpubReader from "../components/readers/EpubReader.vue";
 import AlbumReader from "../components/readers/AlbumReader.vue";
