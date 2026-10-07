@@ -1,5 +1,43 @@
-import {createRouter,createWebHistory} from 'vue-router';import {currentUser} from './services/store';
-const publicPage=()=>import('./views/PublicPage.vue'),account=()=>import('./views/AccountPage.vue'),settings=()=>import('./views/SettingsPage.vue'),library=()=>import('./views/LibraryPage.vue'),document=()=>import('./views/DocumentPage.vue'),upload=()=>import('./views/UploadPage.vue'),reader=()=>import('./views/ReaderPage.vue'),share=()=>import('./views/SharePage.vue'),admin=()=>import('./views/AdminPage.vue');
-export const router=createRouter({history:createWebHistory(),scrollBehavior:()=>({top:0}),routes:[...['/','/how-it-works','/help','/help/:slug','/about','/privacy','/terms'].map(path=>({path,component:publicPage})),...['/sign-in','/sign-up','/forgot-password','/reset-password'].map(path=>({path,component:account})),{path:'/app/settings/:section',component:settings},{path:'/app/library',component:library},...['/app/documents/:id','/app/documents/:id/edit','/app/documents/:id/links','/manage/:token','/manage/:token/claim'].map(path=>({path,component:document})),...['/upload','/upload/progress','/upload/complete/:id'].map(path=>({path,component:upload})),{path:'/share/:token',component:share},...['/app/documents/:id/read','/manage/:token/read','/share/:token/read'].map(path=>({path,component:reader})),{path:'/admin/:section/:id?',component:admin},{path:'/overview',component:()=>import('./views/OverviewPage.vue')},{path:'/design-system',component:()=>import('./views/DesignSystemPage.vue')},{path:'/:pathMatch(.*)*',component:publicPage}]});
-router.addRoute({path:'/logo-preview',component:()=>import('./views/LogoPreviewPage.vue')});
-router.beforeEach(to=>{if(to.path.startsWith('/app/')&&!currentUser())return {path:'/sign-in',query:{return:to.fullPath}};if(to.path.startsWith('/admin/')&&currentUser()?.role!=='admin')return {path:'/overview',query:{role:'admin'}}});
+import { createRouter, createWebHistory } from 'vue-router';
+import { currentUser } from './services/store';
+
+const publicPage = () => 
+    import('./views/PublicPage.vue'), account = () => 
+    import('./views/AccountPage.vue'), settings = () => 
+    import('./views/SettingsPage.vue'), library = () => 
+    import('./views/LibraryPage.vue'), document = () => 
+    import('./views/DocumentPage.vue'), upload = () => 
+    import('./views/UploadPage.vue'), reader = () => 
+    import('./views/ReaderPage.vue'), share = () => 
+    import('./views/SharePage.vue'), admin = () => 
+    import('./views/AdminPage.vue');
+
+export const router = createRouter({ history: createWebHistory(), scrollBehavior: () => ({ top: 0 }),
+    routes: [...['/',
+                '/how-it-works',
+                '/help',
+                '/help/:slug',
+                '/about',
+                '/privacy',
+                '/terms'].map(path => ({ path, component: publicPage })), ...
+                ['/sign-in',
+                '/sign-up',
+                '/forgot-password',
+                '/reset-password'].map(path => ({ path, component: account })), 
+                { path: '/app/settings/:section', component: settings }, 
+                { path: '/app/library', component: library }, ...['/app/documents/:id', '/app/documents/:id/edit', '/app/documents/:id/links', '/manage/:token', '/manage/:token/claim'].map(path => (
+                { path, component: document })), ...['/upload', '/upload/progress', '/upload/complete/:id'].map(path => (
+                { path, component: upload })),
+                { path: '/share/:token', component: share }, ...['/app/documents/:id/read', '/manage/:token/read', '/share/:token/read'].map(path => (
+                { path, component: reader })), 
+                { path: '/admin/:section/:id?', component: admin }, 
+                { path: '/overview', component: () => 
+    import('./views/OverviewPage.vue') }, { path: '/design-system', component: () => 
+    import('./views/DesignSystemPage.vue') }, { path: '/:pathMatch(.*)*', component: publicPage }] });
+router.addRoute({ path: '/logo-preview', component: () => 
+    import('./views/LogoPreviewPage.vue') });
+
+router.beforeEach(to => { if (to.path.startsWith('/app/') && !currentUser()) return { path: '/sign-in', query: { return: to.fullPath } };
+ if (to.path.startsWith('/admin/') && currentUser()?.role !== 'admin')
+    return { path: '/overview', query: { role: 'admin' } } });
+

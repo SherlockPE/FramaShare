@@ -8,7 +8,8 @@
   "scripts": {
     "dev": "concurrently \"npm run dev -w frontend\" \"npm run dev -w back\"",
     "build": "npm run build -w frontend && npm run build -w back",
-    "install:all": "npm install"
+    "install:all": "npm install",
+    "clean": "rm -rf node_modules package-lock.json frontend/node_modules back/node_modules"
   },
   "devDependencies": {
     "concurrently": "^10.0.5"
