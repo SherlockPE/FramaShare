@@ -1,22 +1,370 @@
 <script setup lang="ts">
-import {ref} from 'vue';import {useRouter} from 'vue-router';import {state,resetDemo,notify,formatDate,currentUser,advanceClock,seedState,uid} from '../services/store';import UiModal from '../components/UiModal.vue';const router=useRouter();const reset=ref(false);function role(value:string){state.currentUserId=value==='recipient'?null:value;notify('Demo role: '+value)}const groups=[{title:'Public & account',links:[['Landing','/'],['How it works','/how-it-works'],['Help','/help'],['Formats article','/help/supported-formats'],['About','/about'],['Privacy sample','/privacy'],['Terms sample','/terms'],['Sign in','/sign-in'],['Create account','/sign-up'],['Forgot password','/forgot-password'],['Reset password','/reset-password'],['Profile','/app/settings/profile'],['Security','/app/settings/security'],['Storage','/app/settings/storage']]},{title:'Library & upload',links:[['Library grid','/app/library'],['Library list','/app/library?view=list'],['Empty library','/app/library?state=empty'],['No results','/app/library?search=not-a-publication'],['Loading','/app/library?state=loading'],['Storage full','/app/library?state=quota'],['Processing publication','/app/documents/doc5'],['Failed processing','/app/documents/doc6'],['Upload','/upload'],['Selected sample PDF','/upload?demo=selected'],['Upload failure / retry','/upload?demo=failure'],['Upload cancelled','/upload?demo=cancelled'],['PDF details','/app/documents/doc1'],['Edit album','/app/documents/doc3/edit'],['Create sharing link','/app/documents/doc1?dialog=link'],['Manage anonymous','/manage/private-garden'],['Claim anonymous','/manage/private-garden/claim'],['Invalid manage link','/manage/invalid']]},{title:'Recipient & readers',links:[['Start reading','/share/workshop'],['Password (garden)','/share/protected'],['Expired link','/share/expired'],['Revoked link','/share/revoked'],['Session limit reached','/share/exhausted'],['Invalid link','/share/invalid'],['PDF author reader','/app/documents/doc1/read'],['EPUB author reader','/app/documents/doc2/read'],['Album author reader','/app/documents/doc3/read'],['Anonymous reader','/manage/private-garden/read'],['Recipient preview','/share/protected?preview=1']]},{title:'Administration',links:[['Reports','/admin/reports'],['Report details','/admin/reports/report1'],['Publications','/admin/publications'],['Accounts','/admin/accounts'],['Account limit','/admin/accounts/author'],['Instance settings','/admin/settings']]},{title:'Design',links:[['Design system','/design-system']]}];function go(path:string){if(path.startsWith('/admin'))state.currentUserId='admin';else if(path.startsWith('/app')||path.includes('preview=1'))state.currentUserId='author';else if(path==='/upload'||path.startsWith('/manage'))state.currentUserId=null;router.push(path)}
-const scenarios=[['deleted','Deleted publication'],['removed','Moderator removal'],['ended','Reading session ended'],['network','Reader network failure / retry'],['missing','PDF file unavailable'],['missing-image','Album image unavailable'],['claim-quota','Anonymous claim: storage full'],['expired-manage','Expired management link']];
-function scenario(kind:string){
- const seeds=seedState();const source=seeds.documents.find(d=>d.id===(kind==='missing-image'?'doc3':kind==='claim-quota'||kind==='expired-manage'?'anon1':'doc1'))!;
- const d={...source,images:source.images.map(image=>({...image})),id:uid('scenario'),title:source.title,ownerId:'author' as string|null,manageToken:null as string|null};
- state.currentUserId='author';
- if(kind==='deleted'||kind==='removed')d.status=kind;
- if(kind==='missing')d.seed=false;
- if(kind==='missing-image')d.images[0]!.src='/samples/unavailable-image.svg';
- if(kind==='claim-quota'||kind==='expired-manage'){d.ownerId=null;d.manageToken=uid('manage');d.deleteAt=state.now+(kind==='expired-manage'?-1:86400000)}
- state.documents.push(d);
- if(kind==='claim-quota'){state.accounts.push({id:'quota-demo',name:'Limited account',email:'limited@example.com',quota:1,role:'author'});state.currentUserId='quota-demo';router.push('/manage/'+d.manageToken+'/claim');return}
- if(kind==='expired-manage'){router.push('/manage/'+d.manageToken);return}
- if(kind==='network')state.nextFailure=true;
- if(['network','missing','missing-image'].includes(kind)){router.push('/app/documents/'+d.id+'/read');return}
- const token=uid('scenario-link');state.links.push({id:token,token,documentId:d.id,name:'Scenario reader',password:'',expiresAt:null,limit:null,used:0,allowDownload:true,revoked:false});state.currentUserId=null;router.push('/share/'+token+(kind==='ended'?'/read':''));
+import { ref } from "vue";
+import { useRouter } from "vue-router";
+import {
+  state,
+  resetDemo,
+  notify,
+  formatDate,
+  currentUser,
+  advanceClock,
+  seedState,
+  uid,
+} from "../services/store";
+import UiModal from "../components/UiModal.vue";
+const router = useRouter();
+const reset = ref(false);
+function role(value: string) {
+  state.currentUserId = value === "recipient" ? null : value;
+  notify("Demo role: " + value);
 }
-
+const groups = [
+  {
+    title: "Public & account",
+    links: [
+      ["Landing", "/"],
+      ["How it works", "/how-it-works"],
+      ["Help", "/help"],
+      ["Formats article", "/help/supported-formats"],
+      ["About", "/about"],
+      ["Privacy sample", "/privacy"],
+      ["Terms sample", "/terms"],
+      ["Sign in", "/sign-in"],
+      ["Create account", "/sign-up"],
+      ["Forgot password", "/forgot-password"],
+      ["Reset password", "/reset-password"],
+      ["Profile", "/app/settings/profile"],
+      ["Security", "/app/settings/security"],
+      ["Storage", "/app/settings/storage"],
+    ],
+  },
+  {
+    title: "Library & upload",
+    links: [
+      ["Library grid", "/app/library"],
+      ["Library list", "/app/library?view=list"],
+      ["Empty library", "/app/library?state=empty"],
+      ["No results", "/app/library?search=not-a-publication"],
+      ["Loading", "/app/library?state=loading"],
+      ["Storage full", "/app/library?state=quota"],
+      ["Processing publication", "/app/documents/doc5"],
+      ["Failed processing", "/app/documents/doc6"],
+      ["Upload", "/upload"],
+      ["Selected sample PDF", "/upload?demo=selected"],
+      ["Upload failure / retry", "/upload?demo=failure"],
+      ["Upload cancelled", "/upload?demo=cancelled"],
+      ["PDF details", "/app/documents/doc1"],
+      ["Edit album", "/app/documents/doc3/edit"],
+      ["Create sharing link", "/app/documents/doc1?dialog=link"],
+      ["Manage anonymous", "/manage/private-garden"],
+      ["Claim anonymous", "/manage/private-garden/claim"],
+      ["Invalid manage link", "/manage/invalid"],
+    ],
+  },
+  {
+    title: "Recipient & readers",
+    links: [
+      ["Start reading", "/share/workshop"],
+      ["Password (garden)", "/share/protected"],
+      ["Expired link", "/share/expired"],
+      ["Revoked link", "/share/revoked"],
+      ["Session limit reached", "/share/exhausted"],
+      ["Invalid link", "/share/invalid"],
+      ["PDF author reader", "/app/documents/doc1/read"],
+      ["EPUB author reader", "/app/documents/doc2/read"],
+      ["Album author reader", "/app/documents/doc3/read"],
+      ["Anonymous reader", "/manage/private-garden/read"],
+      ["Recipient preview", "/share/protected?preview=1"],
+    ],
+  },
+  {
+    title: "Administration",
+    links: [
+      ["Reports", "/admin/reports"],
+      ["Report details", "/admin/reports/report1"],
+      ["Publications", "/admin/publications"],
+      ["Accounts", "/admin/accounts"],
+      ["Account limit", "/admin/accounts/author"],
+      ["Instance settings", "/admin/settings"],
+    ],
+  },
+  { title: "Design", links: [["Design system", "/design-system"]] },
+];
+function go(path: string) {
+  if (path.startsWith("/admin")) state.currentUserId = "admin";
+  else if (path.startsWith("/app") || path.includes("preview=1"))
+    state.currentUserId = "author";
+  else if (path === "/upload" || path.startsWith("/manage")) state.currentUserId = null;
+  router.push(path);
+}
+const scenarios = [
+  ["deleted", "Deleted publication"],
+  ["removed", "Moderator removal"],
+  ["ended", "Reading session ended"],
+  ["network", "Reader network failure / retry"],
+  ["missing", "PDF file unavailable"],
+  ["missing-image", "Album image unavailable"],
+  ["claim-quota", "Anonymous claim: storage full"],
+  ["expired-manage", "Expired management link"],
+];
+function scenario(kind: string) {
+  const seeds = seedState();
+  const source = seeds.documents.find(
+    (d) =>
+      d.id ===
+      (kind === "missing-image"
+        ? "doc3"
+        : kind === "claim-quota" || kind === "expired-manage"
+        ? "anon1"
+        : "doc1")
+  )!;
+  const d = {
+    ...source,
+    images: source.images.map((image) => ({ ...image })),
+    id: uid("scenario"),
+    title: source.title,
+    ownerId: "author" as string | null,
+    manageToken: null as string | null,
+  };
+  state.currentUserId = "author";
+  if (kind === "deleted" || kind === "removed") d.status = kind;
+  if (kind === "missing") d.seed = false;
+  if (kind === "missing-image") d.images[0]!.src = "/samples/unavailable-image.svg";
+  if (kind === "claim-quota" || kind === "expired-manage") {
+    d.ownerId = null;
+    d.manageToken = uid("manage");
+    d.deleteAt = state.now + (kind === "expired-manage" ? -1 : 86400000);
+  }
+  state.documents.push(d);
+  if (kind === "claim-quota") {
+    state.accounts.push({
+      id: "quota-demo",
+      name: "Limited account",
+      email: "limited@example.com",
+      quota: 1,
+      role: "author",
+    });
+    state.currentUserId = "quota-demo";
+    router.push("/manage/" + d.manageToken + "/claim");
+    return;
+  }
+  if (kind === "expired-manage") {
+    router.push("/manage/" + d.manageToken);
+    return;
+  }
+  if (kind === "network") state.nextFailure = true;
+  if (["network", "missing", "missing-image"].includes(kind)) {
+    router.push("/app/documents/" + d.id + "/read");
+    return;
+  }
+  const token = uid("scenario-link");
+  state.links.push({
+    id: token,
+    token,
+    documentId: d.id,
+    name: "Scenario reader",
+    password: "",
+    expiresAt: null,
+    limit: null,
+    used: 0,
+    allowDownload: true,
+    revoked: false,
+  });
+  state.currentUserId = null;
+  router.push("/share/" + token + (kind === "ended" ? "/read" : ""));
+}
 </script>
-<template><div class="page"><div class="page-heading"><h1>Every chapter, in one place.</h1><p class="muted">Framashare prototype · Screen map and demonstration scenarios</p></div><div class="card stack"><h2>Before you start</h2><p>This is a local frontend prototype. Accounts, email delivery, link protection and server operations are simulated. Copied links work in this local instance and browser state; they do not share files across devices. Account passwords are never saved. Uploaded files stay in memory until reload; reselect the original file to continue. EPUB uploads use our demonstration chapters, rather than parsing arbitrary books.</p><p>Download off hides the download button. It does not prevent copying or screenshots. Seed files and original artwork are bundled locally. No production backend, real authentication or deployment is included.</p><div class="row wrap"><button class="button secondary" @click="role('author')">Use author role</button><button class="button secondary" @click="role('recipient')">Use recipient role</button><button class="button secondary" @click="role('admin')">Use admin role</button><button class="button secondary" @click="reset=true">Reset demo</button></div><p class="small muted">Current role: {{currentUser()?.role||'recipient'}} · Demo clock: {{formatDate(state.now)}} (Europe/Warsaw)</p><div class="row wrap"><button class="button secondary" @click="advanceClock(61*60000);notify('Clock advanced 61 minutes')">Advance 61 minutes</button><button class="button secondary" @click="advanceClock(86400000);notify('Clock advanced 1 day')">Advance 1 day</button><button class="button secondary" @click="state.nextFailure=true;notify('The next save or upload will fail once')">Fail next operation</button></div><p class="small muted">Demo sign-in: alex@example.com or admin@example.com, any password of at least 8 characters. Link password: garden. The clock is controllable here and advances during the current session.</p></div><div class="overview-grid"><section v-for="group in groups" :key="group.title" class="card"><h2>{{group.title}}</h2><button v-for="[label,path] in group.links" :key="path" class="screen-link" @click="go(path!)"><span>{{label}}</span><span aria-hidden="true">↗</span></button></section></div><section class="card" style="margin-bottom:32px"><h2>Access and recovery states</h2><p class="muted">These actions prepare a separate example publication and open its state. Use Reset demo to restore the original collection.</p><div class="row wrap"><button v-for="[key,label] in scenarios" :key="key" class="button secondary" @click="scenario(key!)">{{label}}</button></div></section><section class="card"><h2>Walk through the product</h2><ol class="scenario-list"><li>Sign up → upload a PDF → create a link → open the reader → return to the library.</li><li>Publish without an account → save your private link → create a recipient link → sign in → add to your library. The old management link becomes invalid; recipient links stay available.</li><li>Create a password link with a custom expiry, a session limit and downloads off. Try an incorrect password, then start reading successfully.</li><li>Reload the active reader. A reload does not use another session. A used-up limit blocks new starts, while active reading continues.</li><li>Keep a reader open and revoke its link from another tab. Reading stops; a second link still works.</li><li>Change EPUB type settings and return. Edit an album’s order, captions and alternative text, then open its reader.</li><li>Report a publication → switch to admin → remove the publication. All its links become unavailable.</li><li>Choose “Fail next operation” → upload → retry. Cancel a second upload before completion.</li></ol></section><UiModal v-if="reset" title="Reset demo data?" @close="reset=false"><p>Only Framashare prototype data and files will be reset. Your other browser storage is untouched.</p><div class="actions"><button class="button secondary" @click="reset=false">Cancel</button><button class="button" @click="resetDemo();reset=false">Reset demo</button></div></UiModal></div></template>
-<style scoped>.overview-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin:32px 0}.screen-link{background:none;border:0;border-bottom:1px solid var(--border);padding:12px 0;display:flex;justify-content:space-between;width:100%;text-align:left;min-height:44px;color:var(--text)}.screen-link:hover{color:#407391}.scenario-list{padding-left:22px;line-height:1.65}.scenario-list li{padding:8px 0}@media(max-width:900px){.overview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.overview-grid{grid-template-columns:1fr}}</style>
+<template>
+  <div class="page">
+    <div class="page-heading">
+      <h1>Every chapter, in one place.</h1>
+      <p class="muted">Framashare prototype · Screen map and demonstration scenarios</p>
+    </div>
+    <div class="card stack">
+      <h2>Before you start</h2>
+      <p>
+        This is a local frontend prototype. Accounts, email delivery, link protection and
+        server operations are simulated. Copied links work in this local instance and
+        browser state; they do not share files across devices. Account passwords are never
+        saved. Uploaded files stay in memory until reload; reselect the original file to
+        continue. EPUB uploads use our demonstration chapters, rather than parsing
+        arbitrary books.
+      </p>
+      <p>
+        Download off hides the download button. It does not prevent copying or
+        screenshots. Seed files and original artwork are bundled locally. No production
+        backend, real authentication or deployment is included.
+      </p>
+      <div class="row wrap">
+        <button class="button secondary" @click="role('author')">Use author role</button
+        ><button class="button secondary" @click="role('recipient')">
+          Use recipient role</button
+        ><button class="button secondary" @click="role('admin')">Use admin role</button
+        ><button class="button secondary" @click="reset = true">Reset demo</button>
+      </div>
+      <p class="small muted">
+        Current role: {{ currentUser()?.role || "recipient" }} · Demo clock:
+        {{ formatDate(state.now) }} (Europe/Warsaw)
+      </p>
+      <div class="row wrap">
+        <button
+          class="button secondary"
+          @click="
+            advanceClock(61 * 60000);
+            notify('Clock advanced 61 minutes');
+          "
+        >
+          Advance 61 minutes</button
+        ><button
+          class="button secondary"
+          @click="
+            advanceClock(86400000);
+            notify('Clock advanced 1 day');
+          "
+        >
+          Advance 1 day</button
+        ><button
+          class="button secondary"
+          @click="
+            state.nextFailure = true;
+            notify('The next save or upload will fail once');
+          "
+        >
+          Fail next operation
+        </button>
+      </div>
+      <p class="small muted">
+        Demo sign-in: alex@example.com or admin@example.com, any password of at least 8
+        characters. Link password: garden. The clock is controllable here and advances
+        during the current session.
+      </p>
+    </div>
+    <div class="overview-grid">
+      <section v-for="group in groups" :key="group.title" class="card">
+        <h2>{{ group.title }}</h2>
+        <button
+          v-for="[label, path] in group.links"
+          :key="path"
+          class="screen-link"
+          @click="go(path!)"
+        >
+          <span>{{ label }}</span
+          ><span aria-hidden="true">↗</span>
+        </button>
+      </section>
+    </div>
+    <section class="card" style="margin-bottom: 32px">
+      <h2>Access and recovery states</h2>
+      <p class="muted">
+        These actions prepare a separate example publication and open its state. Use Reset
+        demo to restore the original collection.
+      </p>
+      <div class="row wrap">
+        <button
+          v-for="[key, label] in scenarios"
+          :key="key"
+          class="button secondary"
+          @click="scenario(key!)"
+        >
+          {{ label }}
+        </button>
+      </div>
+    </section>
+    <section class="card">
+      <h2>Walk through the product</h2>
+      <ol class="scenario-list">
+        <li>
+          Sign up → upload a PDF → create a link → open the reader → return to the
+          library.
+        </li>
+        <li>
+          Publish without an account → save your private link → create a recipient link →
+          sign in → add to your library. The old management link becomes invalid;
+          recipient links stay available.
+        </li>
+        <li>
+          Create a password link with a custom expiry, a session limit and downloads off.
+          Try an incorrect password, then start reading successfully.
+        </li>
+        <li>
+          Reload the active reader. A reload does not use another session. A used-up limit
+          blocks new starts, while active reading continues.
+        </li>
+        <li>
+          Keep a reader open and revoke its link from another tab. Reading stops; a second
+          link still works.
+        </li>
+        <li>
+          Change EPUB type settings and return. Edit an album’s order, captions and
+          alternative text, then open its reader.
+        </li>
+        <li>
+          Report a publication → switch to admin → remove the publication. All its links
+          become unavailable.
+        </li>
+        <li>
+          Choose “Fail next operation” → upload → retry. Cancel a second upload before
+          completion.
+        </li>
+      </ol>
+    </section>
+    <UiModal v-if="reset" title="Reset demo data?" @close="reset = false"
+      ><p>
+        Only Framashare prototype data and files will be reset. Your other browser storage
+        is untouched.
+      </p>
+      <div class="actions">
+        <button class="button secondary" @click="reset = false">Cancel</button
+        ><button
+          class="button"
+          @click="
+            resetDemo();
+            reset = false;
+          "
+        >
+          Reset demo
+        </button>
+      </div></UiModal
+    >
+  </div>
+</template>
+<style scoped>
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  margin: 32px 0;
+}
+.screen-link {
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  padding: 12px 0;
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  text-align: left;
+  min-height: 44px;
+  color: var(--text);
+}
+.screen-link:hover {
+  color: #407391;
+}
+.scenario-list {
+  padding-left: 22px;
+  line-height: 1.65;
+}
+.scenario-list li {
+  padding: 8px 0;
+}
+@media (max-width: 900px) {
+  .overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 560px) {
+  .overview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
