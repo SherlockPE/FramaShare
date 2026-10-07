@@ -1,13 +1,14 @@
 {
-  "name": "Framashare",
+  "name": "framashare-workspace",
   "private": true,
   "workspaces": [
-    "front",
+    "frontend",
     "back"
   ],
   "scripts": {
-    "install:all": "cd front; npm install | cd back; npm install",
-    "dev": "concurrently \"npm run dev -w front\" \"npm run dev -w back\""
+    "dev": "concurrently \"npm run dev -w frontend\" \"npm run dev -w back\"",
+    "build": "npm run build -w frontend && npm run build -w back",
+    "install:all": "npm install"
   },
   "devDependencies": {
     "concurrently": "^10.0.5"
