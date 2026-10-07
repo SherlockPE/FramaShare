@@ -6,7 +6,7 @@
     "back"
   ],
   "scripts": {
-    "dev": "npm run dev -w frontend && npm run dev -w back",
+    "dev": "concurrently \"npm run dev -w frontend\" \"npm run dev -w back\"",
     "ci:all": "npm ci -w frontend && npm ci -w back",
     "build": "npm run build -w frontend && npm run build -w back",
     "install:all": "npm install -w frontend && npm install -w back",
@@ -14,5 +14,11 @@
   },
   "devDependencies": {
     "concurrently": "^10.0.5"
+  },
+  "allowScripts": {
+    "prisma@5.22.0": true,
+    "@prisma/engines@5.22.0": true,
+    "@prisma/client@5.22.0": true,
+    "esbuild@0.28.2": true
   }
 }

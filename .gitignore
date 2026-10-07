@@ -32,3 +32,8 @@ playwright-report/
 docs/verification/test-results/
 docs/verification/admin-test-results/
 docs/design/verification/
+
+# Prisma and Backend
+back/prisma/generated/
+back/dist/
+.env
