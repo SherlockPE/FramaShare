@@ -1,0 +1,661 @@
+@import '@fontsource/figtree/400.css';
+@import '@fontsource/figtree/500.css';
+@import '@fontsource/figtree/600.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/literata/400.css';
+
+:root {
+    font-family: Figtree, sans-serif;
+    color: #262323;
+    background: #f5f5f2;
+    font-synthesis: none;
+    --canvas: #f5f5f2;
+    --surface: #fbfbf8;
+    --border: #dee2de;
+    --muted: #e7e7e3;
+    --text: #262323;
+    --secondary: #626761;
+    --blue: #e3f1f8;
+    --danger: #9a3730;
+    --green: #356447
+}
+
+* {
+    box-sizing: border-box
+}
+
+body {
+    margin: 0
+}
+
+button,
+input,
+select,
+textarea {
+    font: inherit
+}
+
+button,
+a,
+input,
+select,
+textarea {
+    -webkit-tap-highlight-color: transparent
+}
+
+button,
+a {
+    touch-action: manipulation
+}
+
+button {
+    cursor: pointer
+}
+
+a {
+    color: inherit;
+    text-decoration: none
+}
+
+a:hover {
+    text-decoration: underline
+}
+
+button:disabled {
+    opacity: .5;
+    cursor: not-allowed
+}
+
+img {
+    max-width: 100%
+}
+
+h1,
+h2,
+h3,
+p {
+    margin-top: 0
+}
+
+h1 {
+    font-size: 40px;
+    font-weight: 500;
+    line-height: 1.12;
+    letter-spacing: -1.5px
+}
+
+h2 {
+    font-size: 24px;
+    font-weight: 500;
+    letter-spacing: -.5px
+}
+
+h3 {
+    font-size: 20px;
+    font-weight: 500
+}
+
+p {
+    line-height: 1.6
+}
+
+small,
+.small {
+    font-size: 13px
+}
+
+.muted {
+    color: var(--secondary)
+}
+
+.mono {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px
+}
+
+.button,
+button.primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 10px 18px;
+    border: 1px solid #202020;
+    border-radius: 8px;
+    background: linear-gradient(#3c3c3c, #202020);
+    color: white;
+    box-shadow: inset 0 1px 0 #727272, 0 2px 3px #0002;
+    text-decoration: none;
+    font-weight: 500;
+    white-space: normal
+}
+
+.button:hover,
+button.primary:hover {
+    background: #3c3c3c;
+    text-decoration: none
+}
+
+.button.secondary,
+button.secondary {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    box-shadow: inset 0 1px 0 #fff, 0 1px 2px #00000008
+}
+
+.button.ghost {
+    background: transparent;
+    color: var(--text);
+    border-color: transparent;
+    box-shadow: none
+}
+
+.button.danger {
+    background: #913b34;
+    color: white;
+    border-color: #913b34
+}
+
+.icon-button {
+    min-width: 44px;
+    min-height: 44px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 8px;
+    font-size: 22px;
+    color: var(--text)
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    gap: 12px
+}
+
+.between {
+    justify-content: space-between
+}
+
+.wrap {
+    flex-wrap: wrap
+}
+
+.stack {
+    display: flex;
+    flex-direction: column;
+    gap: 20px
+}
+
+.page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 48px 32px 80px
+}
+
+.narrow {
+    max-width: 720px
+}
+
+.page-heading {
+    margin-bottom: 32px
+}
+
+.page-heading p {
+    margin-bottom: 0
+}
+
+.card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: inset 0 1px 0 white
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px
+}
+
+.two-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--border);
+    background: #f1f2ee;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 12px;
+    white-space: nowrap
+}
+
+.badge.ready {
+    background: #edf4ed;
+    color: #356447
+}
+
+.badge.failed {
+    background: #f8ecea;
+    color: #913b34
+}
+
+.badge.processing {
+    background: #e9f1f7;
+    color: #466378
+}
+
+.alert {
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #edf3f6;
+    line-height: 1.5
+}
+
+.error {
+    color: var(--danger)
+}
+
+.alert.error {
+    background: #f8ecea;
+    border-color: #eaccc7
+}
+
+.success {
+    color: var(--green)
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 500
+}
+
+.field input,
+.field select,
+.field textarea,
+input.control,
+select.control {
+    width: 100%;
+    min-height: 44px;
+    border: 1px solid #d5d9d3;
+    border-radius: 8px;
+    padding: 12px;
+    background: #fbfbf8;
+    color: var(--text);
+    font-weight: 400
+}
+
+.field textarea {
+    min-height: 112px;
+    resize: vertical
+}
+
+.field small {
+    font-weight: 400;
+    color: var(--secondary)
+}
+
+input[type=checkbox] {
+    width: 18px;
+    height: 18px;
+    accent-color: #323732
+}
+
+.checkbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px
+}
+
+.tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+    flex-wrap: wrap
+}
+
+.tabs a,
+.tabs button {
+    padding: 14px 18px;
+    min-height: 44px;
+    border: 0;
+    background: none;
+    color: var(--secondary)
+}
+
+.tabs .router-link-exact-active,
+.tabs .active {
+    color: var(--text);
+    box-shadow: inset 0 -2px 0 #262323
+}
+
+.segmented {
+    display: flex;
+    border: 1px solid var(--border);
+    padding: 4px;
+    border-radius: 8px;
+    background: #eaece7
+}
+
+.segmented button {
+    border: 0;
+    min-height: 36px;
+    padding: 7px 14px;
+    background: transparent;
+    border-radius: 5px
+}
+
+.segmented .active {
+    background: var(--surface);
+    box-shadow: 0 1px 3px #0001
+}
+
+.dropdown {
+    position: relative;
+    display: inline-block
+}
+
+.dropdown-panel {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    min-width: 210px;
+    max-width: calc(100vw - 40px);
+    padding: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    z-index: 40;
+    box-shadow: 0 10px 30px #0001
+}
+
+.dropdown-panel a,
+.dropdown-panel button {
+    display: block;
+    text-align: left;
+    width: 100%;
+    border: 0;
+    padding: 12px;
+    background: none;
+    border-radius: 5px;
+    color: var(--text);
+    min-height: 44px;
+    text-decoration: none
+}
+
+.dropdown-panel button:hover,
+.dropdown-panel a:hover {
+    background: var(--muted)
+}
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: #20202055;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    backdrop-filter: blur(3px)
+}
+
+.modal {
+    background: var(--surface);
+    border: 1px solid white;
+    border-radius: 16px;
+    width: 560px;
+    max-width: 100%;
+    max-height: 90dvh;
+    overflow-y: auto;
+    padding: 24px;
+    box-shadow: 0 16px 80px #0002
+}
+
+.modal header {
+    margin-bottom: 24px
+}
+
+.modal header h2 {
+    margin: 0
+}
+
+.modal .actions {
+    margin-top: 24px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px
+}
+
+.toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: calc(100vw - 32px);
+    padding: 14px 24px;
+    background: #262323;
+    color: white;
+    z-index: 200;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px #0002
+}
+
+.empty {
+    text-align: center;
+    padding: 64px 24px
+}
+
+.empty h2 {
+    margin-top: 20px
+}
+
+.divider {
+    height: 1px;
+    background: var(--border);
+    margin: 24px 0
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse
+}
+
+.table td,
+.table th {
+    text-align: left;
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 400
+}
+
+.table th {
+    font-size: 13px;
+    color: var(--secondary)
+}
+
+.url {
+    overflow-wrap: anywhere;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    background: white;
+    border-radius: 8px
+}
+
+.cover {
+    height: 190px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9px;
+    overflow: hidden;
+    position: relative;
+    background: #e8eee5
+}
+
+.cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover
+}
+
+.cover-book {
+    font-family: Literata, serif;
+    background: #d9e4d0;
+    width: 110px;
+    height: 145px;
+    box-shadow: 8px 8px 0 #00000012;
+    border-left: 6px solid #94a78b;
+    padding: 18px 12px;
+    font-size: 14px;
+    line-height: 1.4
+}
+
+.cover.pdf {
+    background: #eae8e2
+}
+
+.cover.pdf .cover-book {
+    background: #f7f4e9;
+    border-left-color: #d3c8af
+}
+
+.cover.epub {
+    background: #dde8de
+}
+
+.progress {
+    width: 100%;
+    accent-color: #356447;
+    height: 12px
+}
+
+progress {
+    width: 100%;
+    height: 10px
+}
+
+:focus-visible {
+    outline: 3px solid #4580a8;
+    outline-offset: 3px
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0)
+}
+
+@media(max-width:800px) {
+    h1 {
+        font-size: 32px
+    }
+
+    .page {
+        padding: 32px 20px 64px
+    }
+
+    .grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr))
+    }
+
+    .two-columns {
+        grid-template-columns: 1fr
+    }
+
+    .table,
+    .table tbody,
+    .table tr,
+    .table td {
+        display: block
+    }
+
+    .table thead {
+        display: none
+    }
+
+    .table tr {
+        padding: 12px 0;
+        border-bottom: 1px solid var(--border)
+    }
+
+    .table td {
+        border: 0;
+        padding: 6px 8px;
+        overflow-wrap: anywhere
+    }
+
+    .modal-backdrop {
+        padding: 12px
+    }
+
+    .modal {
+        padding: 20px;
+        max-height: 94dvh
+    }
+}
+
+@media(max-width:480px) {
+    .grid {
+        grid-template-columns: 1fr
+    }
+
+    .page {
+        padding: 28px 16px 48px
+    }
+
+    .row {
+        gap: 8px
+    }
+
+    .page-heading.row {
+        align-items: flex-start;
+        flex-wrap: wrap
+    }
+
+    .card {
+        padding: 20px
+    }
+
+    .button {
+        padding: 10px 14px
+    }
+
+    .modal .actions {
+        flex-wrap: wrap
+    }
+
+    .modal .actions .button {
+        flex: 1
+    }
+
+    .cover {
+        height: 210px
+    }
+}
+
+@media(prefers-reduced-motion:reduce) {
+    * {
+        scroll-behavior: auto !important;
+        animation: none !important;
+        transition: none !important
+    }
+}
