@@ -5,14 +5,18 @@
   "type": "module",
   "scripts": {
     "saluda": "echo 'Hola mundo'",
+    "all": "npm install && npm run dev",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tailwindcss/vite": "^4.3.3",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "react-router-dom": "^7.18.4",
+    "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
