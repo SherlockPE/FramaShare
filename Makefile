@@ -1,17 +1,20 @@
 # Framashare Makefile
+
 all: install
 
 # Start the development environment (Frontend + Backend concurrently)
 dev:
-	npm run dev
+	pnpm run dev
+
+run: install dev
 
 # Install all dependencies for the workspace
 install:
-	npm install
+	pnpm install
 
 # Build production artifacts (Frontend Vue + Backend Fastify)
 build:
-	npm run build
+	pnpm run build
 
 # Start Docker Compose (PostgreSQL, Proxy, Backend)
 db-up:
@@ -23,7 +26,7 @@ db-down:
 
 # Run Prisma Migrations and generate client
 db-migrate:
-	cd back && npx prisma migrate dev && npx prisma generate
+	cd back && pnpm dlx prisma migrate dev && pnpm dlx prisma generate
 
 # Colorcitos down ñeheheheh
 # ⣿⣿⣿⠟⠛⠛⠻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡟⢋⣩⣉⢻⣿⡇
@@ -61,13 +64,13 @@ fclean: clean
 	@printf "$(RED)Deep clean: removing dependencies (node_modules)...$(RESET)\n"
 	@printf "$(YELLOW)Starting with frontend 🧹 "
 	@for i in 1 2 3; do printf "."; sleep 0.2; done; printf "$(RESET)\n"
-	@rm -rf node_modules package-lock.json
-	@rm -rf frontend/node_modules frontend/package-lock.json
+	@rm -rf node_modules pnpm-lock.yaml
+	@rm -rf frontend/node_modules frontend/pnpm-lock.yaml
 	@printf "$(GREEN)Frontend clean completed :D ✨$(RESET)\n"
 	
 	@printf "$(YELLOW)Starting with backend 🧹 "
 	@for i in 1 2 3; do printf "."; sleep 0.2; done; printf "$(RESET)\n"
-	@rm -rf back/node_modules back/package-lock.json
+	@rm -rf back/node_modules back/pnpm-lock.yaml
 	@printf "$(GREEN)Total clean completed :D ✨$(RESET)\n"
 
 # Re-install and setup everything from scratch
