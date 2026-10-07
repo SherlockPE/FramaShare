@@ -6,9 +6,10 @@
     "back"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev -w frontend\" \"npm run dev -w back\"",
+    "dev": "npm run dev -w frontend && npm run dev -w back",
+    "ci:all": "npm ci -w frontend && npm ci -w back",
     "build": "npm run build -w frontend && npm run build -w back",
-    "install:all": "npm install",
+    "install:all": "npm install -w frontend && npm install -w back",
     "clean": "rm -rf node_modules package-lock.json frontend/node_modules back/node_modules"
   },
   "devDependencies": {
