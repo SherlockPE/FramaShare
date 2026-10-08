@@ -2,52 +2,74 @@
 import { ref, onMounted, watch } from "vue";
 import type { Publication } from "../services/store";
 import { imageSource } from "../services/store";
-import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
-import worker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-
-GlobalWorkerOptions.workerSrc = worker;
+import * as mupdf from "mupdf";
 
 const props = defineProps<{ document: Publication }>();
 const canvas = ref<HTMLCanvasElement>();
 const loading = ref(true);
 
-async function renderPdfCover() {
-  if (props.document.format !== 'pdf' || !props.document.source) return;
+async function renderCover() {
+  if ((props.document.format !== 'pdf' && props.document.format !== 'epub') || !props.document.source) return;
   if (!canvas.value) return;
 
   try {
     loading.value = true;
-    const pdf = await getDocument(props.document.source).promise;
-    const page = await pdf.getPage(1);
     
-    // Scale viewport to a reasonable thumbnail resolution
-    const viewport = page.getViewport({ scale: 1 });
-    const scale = 400 / viewport.width; 
-    const scaledViewport = page.getViewport({ scale });
+    // Fetch the file content
+    const response = await fetch(props.document.source);
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const buffer = await response.arrayBuffer();
+    
+    // Determine the magic format based on file extension or format
+    const magic = props.document.format === 'epub' ? "application/epub+zip" : "application/pdf";
+
+    // Open document
+    const doc = mupdf.Document.openDocument(new Uint8Array(buffer), magic);
+    
+    // Load first page
+    const page = doc.loadPage(0);
+    
+    // Render to a Pixmap. We use a base scale. 
+    // We want a width of around 400px. Let's find the native size first.
+    const bounds = page.getBounds();
+    const nativeWidth = bounds[2] - bounds[0];
+    const scale = 400 / nativeWidth;
+    
+    const pixmap = page.toPixmap(mupdf.Matrix.scale(scale, scale), mupdf.ColorSpace.DeviceRGB, true, true);
 
     const ctx = canvas.value.getContext('2d');
     if (!ctx) return;
 
-    canvas.value.width = scaledViewport.width;
-    canvas.value.height = scaledViewport.height;
+    const width = pixmap.getWidth();
+    const height = pixmap.getHeight();
 
-    await page.render({
-      canvasContext: ctx,
-      viewport: scaledViewport
-    }).promise;
+    canvas.value.width = width;
+    canvas.value.height = height;
+
+    const imageData = new ImageData(
+      pixmap.getPixels(),
+      width,
+      height
+    );
+    ctx.putImageData(imageData, 0, 0);
+
+    // Cleanup
+    pixmap.destroy();
+    page.destroy();
+    doc.destroy();
   } catch (err) {
-    console.error('Failed to render PDF cover', err);
+    console.error('Failed to render document cover', err);
   } finally {
     loading.value = false;
   }
 }
 
 onMounted(() => {
-  renderPdfCover();
+  renderCover();
 });
 
 watch(() => props.document.source, () => {
-  renderPdfCover();
+  renderCover();
 });
 </script>
 
@@ -58,12 +80,12 @@ watch(() => props.document.source, () => {
       :src="imageSource(document, 0)"
       :alt="document.images[0]?.alt"
     />
-    <div v-else-if="document.format === 'pdf'" class="pdf-cover">
+    <div v-else-if="document.format === 'pdf' || document.format === 'epub'" class="pdf-cover">
       <canvas ref="canvas" class="pdf-canvas" :style="{ opacity: loading ? 0 : 1 }"></canvas>
       <div v-if="loading" class="cover-book">
         <div class="cover-title">{{ document.title }}</div>
         <div class="small" style="margin-top: 12px; font-family: Figtree">
-          Framashare<br />PDF
+          Framashare<br />{{ document.format.toUpperCase() }}
         </div>
       </div>
     </div>
@@ -89,7 +111,7 @@ watch(() => props.document.source, () => {
   height: 100%;
   position: relative;
   overflow: hidden;
-  background: white; /* Make sure transparent PDFs have a white background */
+  background: white; /* Make sure transparent pages have a white background */
 }
 .pdf-canvas {
   width: 100%;

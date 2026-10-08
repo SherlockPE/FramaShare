@@ -107,15 +107,21 @@ flowchart TD
     - Retornar confirmación `204 No Content`.
 
 ### Etapa 3.5: Integración con el Frontend (Vue 3)
-- [ ] Actualizar el sistema de subida en la UI (`frontend/src/services/store.ts` o componentes de Upload):
+- [x] Actualizar el sistema de subida en la UI (`frontend/src/services/store.ts` o componentes de Upload):
   - Cambiar el almacenamiento in-memory/blob de local por el envío real a través de `FormData` a `POST /api/files/upload`.
-- [ ] Actualizar visores del Frontend (PDF.js, EPUB, Componente de Imágenes):
+- [x] Actualizar visores del Frontend (PDF.js, EPUB, Componente de Imágenes):
   - Adaptar la prop de fuente/src para apuntar al endpoint real `GET /api/files/:id`.
   - Para PDF.js, asegurarse de no descargar el blob entero previamente en JavaScript, sino pasarle directamente la URL remota para que se encargue internamente de realizar las llamadas de rango (byte-ranges).
-- [ ] Actualizar la eliminación de archivos:
+- [x] Actualizar la eliminación de archivos:
   - Invocar al endpoint `DELETE /api/files/:id` y, en caso de éxito, actualizar el estado (store) quitándolo de la vista.
 
-### Etapa 3.6: Pruebas y Verificación
+### Etapa 3.6: Integración con mupdf.js (Renderizado Unificado)
+- [x] Eliminar la dependencia `pdfjs-dist` y reemplazarla por `mupdf`.
+- [x] Modificar el visor para usar `mupdf` y renderizar PDFs
+- [ ]  Hacer lo mismo para EPUBs
+- [x] Modificar el componente de portadas para que use `mupdf` para extraer la primera página (funciona para PDFs, EPUBs, etc.).
+
+### Etapa 3.7: Pruebas y Verificación
 - [ ] Subir múltiples formatos (PDF, EPUB, Imágenes) y confirmar su escritura correcta en el directorio de servidor (ej. `back/uploads/`).
 - [ ] Confirmar que el tamaño (`size`) y tipo (`mimeType`) se mapean correctamente a la base de datos.
 - [ ] Inspeccionar peticiones de red del visor de PDFs en las herramientas de desarrollo del navegador para verificar que se lanzan requests con headers `Range: bytes=X-Y` y el servidor responde con status `206`.

@@ -11,8 +11,7 @@ import {
   Link2Off,
   Eye,
 } from "@lucide/vue";
-import PdfReader from "../components/readers/PdfReader.vue";
-import EpubReader from "../components/readers/EpubReader.vue";
+import MupdfReader from "../components/readers/MupdfReader.vue";
 import AlbumReader from "../components/readers/AlbumReader.vue";
 import ReportDialog from "../components/readers/ReportDialog.vue";
 import {
@@ -295,17 +294,14 @@ onBeforeUnmount(() => {
         <button class="button" @click="selectAgain">Select file again</button>
         <p v-if="fileError" class="error" role="alert">{{ fileError }}</p>
       </div>
-      <PdfReader
-        v-else-if="publication?.format === 'pdf'"
+      <MupdfReader
+        v-else-if="publication?.format === 'pdf' || publication?.format === 'epub'"
         :key="fileVersion"
         :source="source || ''"
+        :format="publication.format"
         :initial-page="publication.position"
         @position="position"
-        @reselect="selectAgain" /><EpubReader
-        v-else-if="publication?.format === 'epub'"
-        :initial-page="publication.position"
-        :sample="publication.seed"
-        @position="position" /><AlbumReader
+        @reselect="selectAgain" /><AlbumReader
         v-else-if="publication"
         :key="fileVersion"
         :publication="publication"
