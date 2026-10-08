@@ -1,1 +1,0 @@
-import {defineConfig} from '@playwright/test';export default defineConfig({testDir:'tests',testMatch:'flows.e2e.ts',workers:1,fullyParallel:false,timeout:40000,use:{baseURL:'http://127.0.0.1:5173',headless:true,viewport:{width:1440,height:1000}},reporter:'list',outputDir:'docs/verification/test-results'});
