@@ -13,14 +13,21 @@
   "keywords": [],
   "type": "commonjs",
   "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
     "@types/node": "^26.6.4",
+    "@types/nodemailer": "^6.4.17",
     "prisma": "^5.22.0",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3"
   },
   "dependencies": {
+    "@fastify/cookie": "^11.1.2",
     "@fastify/cors": "^11.3.0",
+    "@fastify/jwt": "^9.0.4",
     "@prisma/client": "^5.22.0",
-    "fastify": "^5.12.5"
+    "bcrypt": "^5.1.1",
+    "dotenv": "^16.4.7",
+    "fastify": "^5.12.5",
+    "nodemailer": "^6.10.0"
   }
 }
