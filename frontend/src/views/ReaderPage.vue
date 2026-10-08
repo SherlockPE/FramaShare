@@ -81,14 +81,17 @@ const denial = computed(() => {
 const fileVersion = ref(0);
 const source = computed(() => {
   fileVersion.value;
-  return publication.value?.seed
-    ? publication.value.source
-    : files.get(publication.value?.id || "")?.urls[0];
+  const d = publication.value;
+  if (!d) return undefined;
+  if (d.source && d.source.startsWith('/api/files/')) return d.source;
+  return d.seed ? d.source : files.get(d.id)?.urls[0];
 });
 const missingFile = computed(() => {
   fileVersion.value;
   const d = publication.value;
-  return !!d && !d.seed && !files.has(d.id);
+  if (!d) return false;
+  if (d.source && d.source.startsWith('/api/files/')) return false;
+  return !d.seed && !files.has(d.id);
 });
 const back = computed(() => {
   if (typeof route.query.return === "string" && route.query.return.startsWith("/"))

@@ -316,7 +316,7 @@ function downloadManagement() {
               </button>
             </div>
             <div
-              v-if="!doc.seed && !files.has(doc.id)"
+              v-if="!doc.seed && !(doc.source && doc.source.startsWith('/api/files/')) && !files.has(doc.id)"
               class="alert"
               style="margin-top: 16px"
             >

@@ -77,7 +77,7 @@ flowchart TD
   - Generar el cliente de Prisma actualizado.
 
 ### Etapa 3.3: Servicios de Almacenamiento de Backend
-- [ ] **Crear Servicio de Almacenamiento (`back/src/services/storage.service.ts`)**:
+- [x] **Crear Servicio de Almacenamiento (`back/src/services/storage.service.ts`)**:
   - Implementar patrón que facilite el cambio entre almacenamiento local y la nube (S3).
   - `saveFile(stream, metadata): Promise<string>`: Escribe el stream a disco y retorna la ruta o clave de almacenamiento (`storageKey`).
   - `getFileStream(storageKey: string, range?: { start: number, end: number }): Promise<ReadableStream>`: Lee el archivo desde disco soportando opcionalmente rangos.
@@ -85,8 +85,8 @@ flowchart TD
   - `deleteFile(storageKey: string): Promise<void>`: Borra físicamente el archivo del disco.
 
 ### Etapa 3.4: Rutas y Controladores de Archivos (`/api/files`)
-- [ ] Registrar `@fastify/multipart` en la instancia de la aplicación `back/src/index.ts`.
-- [ ] Crear módulo de rutas `back/src/routes/files.routes.ts`:
+- [x] Registrar `@fastify/multipart` en la instancia de la aplicación `back/src/index.ts`.
+- [x] Crear módulo de rutas `back/src/routes/files.routes.ts`:
   - `POST /api/files/upload`:
     - Procesar el stream de la subida.
     - Validar tipos MIME permitidos y el límite de tamaño.

@@ -3,7 +3,9 @@ import cors from '@fastify/cors'
 
 import fastifyJwt from '@fastify/jwt';
 import fastifyCookie from '@fastify/cookie';
+import fastifyMultipart from '@fastify/multipart';
 import { authRoutes } from './routes/auth.routes.js';
+import { fileRoutes } from './routes/files.routes.js';
 
 const server = Fastify({
   logger: true
@@ -12,6 +14,12 @@ const server = Fastify({
 server.register(cors, {
   origin: ['http://localhost:5173'], // Restrict in production, but allow frontend
   credentials: true
+})
+
+server.register(fastifyMultipart, {
+  limits: {
+    fileSize: parseInt(process.env.MAX_FILE_SIZE || '104857600', 10)
+  }
 })
 
 server.register(fastifyJwt, {
@@ -27,6 +35,7 @@ server.register(fastifyCookie, {
 })
 
 server.register(authRoutes, { prefix: '/api/auth' })
+server.register(fileRoutes, { prefix: '/api/files' })
 
 server.get('/api/health', async (request, reply) => {
   return { status: 'ok', timestamp: new Date().toISOString() }

@@ -31,18 +31,112 @@ export function activeSession(token: string) { return state.sessions.find(s => s
 export function sessionDenial(token: string) { const link = state.links.find(l => l.token === token); return linkDenial(link, true) || (!activeSession(token) ? 'Reading session ended' : null) }
 export function startSession(token: string, password: string) { const link = state.links.find(l => l.token === token); const denial = linkDenial(link, !!activeSession(token)); if (denial) throw Error(denial); if (!link) throw Error('Link unavailable'); const existing = activeSession(token); if (existing) return existing; if (link.password && link.password !== password) throw Error('Incorrect password. Try again.'); const session = { id: uid('session'), token, expiresAt: state.now + 3600000 }; link.used++; state.sessions.push(session); return session }
 export function claimDocument(token: string, accountId: string) { const d = getManaged(token), a = state.accounts.find(a => a.id === accountId); if (!d || !a) throw Error('Management link unavailable'); if (usage(accountId) + d.size > a.quota) throw Error('Not enough storage. Free up space before adding this publication.'); d.ownerId = accountId; d.manageToken = null; d.deleteAt = null; d.updatedAt = state.now; return d }
-export function deleteDocument(id: string, moderated = false) { const d = getDocument(id); if (d) { d.status = moderated ? 'removed' : 'deleted'; d.manageToken = null; releaseFiles(id); state.reports.filter(r => r.documentId === id && r.status === 'open').forEach(r => { r.status = 'resolved'; r.decision = moderated ? 'Publication removed' : 'Publication deleted' }) } }
+export function deleteDocument(id: string, moderated = false) {
+  const d = getDocument(id);
+  if (d) {
+    if (d.source.startsWith('/api/files/')) {
+      const backendId = d.source.split('/').pop();
+      if (backendId) fetch(`/api/files/${backendId}`, { method: 'DELETE' }).catch(console.error);
+    }
+    d.status = moderated ? 'removed' : 'deleted';
+    d.manageToken = null;
+    releaseFiles(id);
+    state.reports.filter(r => r.documentId === id && r.status === 'open').forEach(r => { r.status = 'resolved'; r.decision = moderated ? 'Publication removed' : 'Publication deleted' })
+  }
+}
 export async function delay() { await new Promise(r => setTimeout(r, 350)); if (state.nextFailure) { state.nextFailure = false; throw Error('Connection interrupted. Please try again.') } }
-export async function upload(input: { title: string; description: string; format: Format; selected: File[]; retention: number; sample?: boolean }) { await delay(); const owner = currentUser(); const size = input.selected.reduce((n, f) => n + f.size, 0) || 2400000; if (owner && usage(owner.id) + size > owner.quota) throw Error('Storage limit reached. Remove a publication to continue.'); const id = uid('doc'); if (input.selected.length) registerFiles(id, input.selected); const d: Publication = { id, title: input.title, description: input.description, format: input.format, size, ownerId: owner?.id || null, manageToken: owner ? null : uid('manage'), deleteAt: owner ? null : state.now + input.retention * DAY, status: 'ready', createdAt: state.now, updatedAt: state.now, source: input.sample ? '/samples/workshop.pdf' : '', images: input.format === 'album' ? input.selected.map((f, i) => ({ id: uid('image'), src: String(i), caption: f.name.replace(/\.[^.]+$/, ''), alt: f.name })) : [], seed: !!input.sample, position: 1 }; state.documents.unshift(d); return d }
+export async function upload(input: { title: string; description: string; format: Format; selected: File[]; retention: number; sample?: boolean }) {
+  await delay();
+  const owner = currentUser();
+  const size = input.selected.reduce((n, f) => n + f.size, 0) || 2400000;
+  if (owner && usage(owner.id) + size > owner.quota) throw Error('Storage limit reached. Remove a publication to continue.');
+  
+  const id = uid('doc');
+  let source = input.sample ? '/samples/workshop.pdf' : '';
+
+  if (!input.sample && input.selected.length > 0) {
+    if (input.format === 'pdf' || input.format === 'epub') {
+      const file = input.selected[0];
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const res = await fetch('/api/files/upload', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!res.ok) {
+        const err = await res.json();
+        throw Error(err.error || 'Upload failed on server');
+      }
+      
+      const data = await res.json();
+      source = `/api/files/${data.id}`;
+    } else {
+      registerFiles(id, input.selected);
+    }
+  }
+
+  const d: Publication = { 
+    id, 
+    title: input.title, 
+    description: input.description, 
+    format: input.format, 
+    size, 
+    ownerId: owner?.id || null, 
+    manageToken: owner ? null : uid('manage'), 
+    deleteAt: owner ? null : state.now + input.retention * DAY, 
+    status: 'ready', 
+    createdAt: state.now, 
+    updatedAt: state.now, 
+    source, 
+    images: input.format === 'album' ? input.selected.map((f, i) => ({ id: uid('image'), src: String(i), caption: f.name.replace(/\.[^.]+$/, ''), alt: f.name })) : [], 
+    seed: !!input.sample, 
+    position: 1 
+  };
+  
+  state.documents.unshift(d);
+  return d;
+}
 export function saveLink(documentId: string, input: Partial<SharingLink>, id?: string) { if (!input.name?.trim()) throw Error('Give this link a name.'); if (input.limit != null && (!Number.isInteger(input.limit) || input.limit < 1)) throw Error('Session limit must be a positive whole number.'); if (input.expiresAt != null && (!Number.isFinite(input.expiresAt) || input.expiresAt <= state.now)) throw Error('Choose a date in the future.'); const old = state.links.find(l => l.id === id); if (old) { Object.assign(old, input); return old } const link: SharingLink = { id: uid('link'), token: uid('read'), documentId, name: input.name, password: '', expiresAt: null, limit: null, used: 0, allowDownload: true, revoked: false, ...input }; state.links.push(link); return link }
 export function addReport(documentId: string, reason: string, description: string) { if (!reason || !description.trim()) throw Error('Choose a reason and describe the concern.'); state.reports.unshift({ id: uid('report'), documentId, reason, description, createdAt: state.now, status: 'open' }); notify('Report submitted') }
 export async function copyLink(path: string) { const url = new URL(path, location.origin).href; try { await navigator.clipboard.writeText(url); notify('Link copied') } catch { const field = Array.from(document.querySelectorAll<HTMLElement>('.url')).find(node => node.textContent?.trim() === url); if (field) { field.focus(); const range = document.createRange(); range.selectNodeContents(field); const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range) } notify('Copy unavailable. Select the link and copy it manually.') } return url }
 
 // Auth
+export async function apiGetDocuments() {
+  if (!state.currentUserId) return;
+  try {
+    const res = await fetch('/api/files');
+    if (res.ok) {
+      const data = await res.json();
+      const backendDocs: Publication[] = data.documents.map((d: any) => ({
+        id: d.id,
+        title: d.title,
+        description: d.description || '',
+        format: d.mimeType.includes('pdf') ? 'pdf' : d.mimeType.includes('epub') ? 'epub' : 'album',
+        size: d.size,
+        ownerId: d.userId,
+        manageToken: null,
+        deleteAt: d.retentionDays ? Date.parse(d.createdAt) + d.retentionDays * 86400000 : null,
+        status: d.status,
+        createdAt: Date.parse(d.createdAt),
+        updatedAt: Date.parse(d.updatedAt),
+        source: `/api/files/${d.id}`,
+        images: [],
+        seed: false,
+        position: 1
+      }));
+      state.documents = state.documents.filter(d => d.ownerId !== state.currentUserId).concat(backendDocs);
+    }
+  } catch (err) {
+    console.error('Failed to fetch documents', err);
+  }
+}
+
 export async function apiRegister(data: any) { const res = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); if (!res.ok) { const err = await res.json(); throw Error(err.error || 'Registration failed'); } const result = await res.json(); const account = result.user; account.quota = Number(account.quota); if (!state.accounts.find(a => a.id === account.id)) state.accounts.push(account); state.currentUserId = account.id; return account; }
-export async function apiLogin(data: any) { const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); if (!res.ok) { const err = await res.json(); throw Error(err.error || 'Invalid credentials'); } const result = await res.json(); const account = result.user; account.quota = Number(account.quota); const idx = state.accounts.findIndex(a => a.id === account.id); if (idx === -1) state.accounts.push(account); else state.accounts[idx] = account; state.currentUserId = account.id; return account; }
+export async function apiLogin(data: any) { const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); if (!res.ok) { const err = await res.json(); throw Error(err.error || 'Invalid credentials'); } const result = await res.json(); const account = result.user; account.quota = Number(account.quota); const idx = state.accounts.findIndex(a => a.id === account.id); if (idx === -1) state.accounts.push(account); else state.accounts[idx] = account; state.currentUserId = account.id; apiGetDocuments(); return account; }
 export async function apiLogout() { await fetch('/api/auth/logout', { method: 'POST' }); state.currentUserId = null; }
-export async function apiGetMe() { try { const res = await fetch('/api/auth/me'); if (res.ok) { const result = await res.json(); const account = result.user; account.quota = Number(account.quota); const idx = state.accounts.findIndex(a => a.id === account.id); if (idx === -1) state.accounts.push(account); else state.accounts[idx] = account; state.currentUserId = account.id; return account; } else { state.currentUserId = null; } } catch (err) {} return null; }
+export async function apiGetMe() { try { const res = await fetch('/api/auth/me'); if (res.ok) { const result = await res.json(); const account = result.user; account.quota = Number(account.quota); const idx = state.accounts.findIndex(a => a.id === account.id); if (idx === -1) state.accounts.push(account); else state.accounts[idx] = account; state.currentUserId = account.id; apiGetDocuments(); return account; } else { state.currentUserId = null; } } catch (err) {} return null; }
 export async function apiForgotPassword(email: string) { const res = await fetch('/api/auth/forgot-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) }); if (!res.ok) { const err = await res.json(); throw Error(err.error || 'Request failed'); } return await res.json(); }
 export async function apiResetPassword(data: any) { const res = await fetch('/api/auth/reset-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); if (!res.ok) { const err = await res.json(); throw Error(err.error || 'Reset failed'); } return await res.json(); }
 
