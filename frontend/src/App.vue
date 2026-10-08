@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { BookOpen, Menu, X, Upload, Library, Shield, UserRound } from "@lucide/vue";
+import { Menu, X, Upload, Library, Shield, UserRound } from "@lucide/vue";
 import UiMenu from "./components/UiMenu.vue";
 import { currentUser, state, ui, notify, apiLogout } from "./services/store";
 const route = useRoute(),
@@ -28,7 +28,7 @@ async function logout() {
   <template v-if="!isReader"
     ><header class="site-header">
       <RouterLink to="/" class="brand"
-        ><BookOpen :size="23" stroke-width="1.5" />Framashare</RouterLink
+        ><img src="/icons/newLogo.svg" alt="" width="48" height="48" />Framashare</RouterLink
       >
       <nav class="desktop-nav" aria-label="Main navigation">
         <template v-if="route.path.startsWith('/app') || route.path.startsWith('/admin')"
@@ -79,7 +79,7 @@ async function logout() {
     <RouterView :key="route.path.startsWith('/upload') ? 'upload' : route.path" />
   </main>
   <footer v-if="!isReader" class="site-footer">
-    <RouterLink to="/" class="brand"><BookOpen :size="20" />Framashare</RouterLink>
+    <RouterLink to="/" class="brand"><img src="/icons/newLogo.svg" alt="" width="48" height="48" />Framashare</RouterLink>
     <p class="muted small">A little space for shared reading.</p>
     <div class="row wrap">
       <RouterLink to="/privacy">Privacy</RouterLink
@@ -106,8 +106,11 @@ async function logout() {
   gap: 32px;
   background: var(--canvas);
 }
+
+
 .brand {
   font-size: 25px;
+  stroke: 2;
   font-weight: 500;
   letter-spacing: -0.8px;
   display: flex;
@@ -115,6 +118,8 @@ async function logout() {
   gap: 10px;
 }
 .desktop-nav {
+  width: 50px;
+  height: 50px;
   display: flex;
   align-items: center;
   gap: 32px;

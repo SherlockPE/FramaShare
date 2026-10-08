@@ -9,7 +9,7 @@ const canvas = ref<HTMLCanvasElement>();
 const loading = ref(true);
 
 async function renderCover() {
-  if ((props.document.format !== 'pdf' && props.document.format !== 'epub') || !props.document.source) return;
+  if (props.document.format !== 'pdf' || !props.document.source) return;
   if (!canvas.value) return;
 
   try {
@@ -21,14 +21,10 @@ async function renderCover() {
     const buffer = await response.arrayBuffer();
     
     // Determine the magic format based on file extension or format
-    const magic = props.document.format === 'epub' ? "epub" : "pdf";
+    const magic = "pdf";
 
     // Open document
     const doc = mupdf.Document.openDocument(new Uint8Array(buffer), magic);
-    
-    if (props.document.format === 'epub') {
-      doc.layout(400, 600, 12);
-    }
     
     // Load first page
     const page = doc.loadPage(0);
@@ -84,7 +80,7 @@ watch(() => props.document.source, () => {
       :src="imageSource(document, 0)"
       :alt="document.images[0]?.alt"
     />
-    <div v-else-if="document.format === 'pdf' || document.format === 'epub'" class="pdf-cover">
+    <div v-else-if="document.format === 'pdf'" class="pdf-cover">
       <canvas ref="canvas" class="pdf-canvas" :style="{ opacity: loading ? 0 : 1 }"></canvas>
       <div v-if="loading" class="cover-book">
         <div class="cover-title">{{ document.title }}</div>

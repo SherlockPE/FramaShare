@@ -126,7 +126,7 @@ async function submit() {
     <section class="account-form">
       <div class="form-inner">
         <RouterLink class="form-brand" to="/"
-          ><BookOpen :size="28" stroke-width="1.4" />Framashare</RouterLink
+          ><img src="/icons/newLogo.svg" alt="" width="48" height="48" />Framashare</RouterLink
         >
         <h1>{{ title }}</h1>
         <p class="muted">

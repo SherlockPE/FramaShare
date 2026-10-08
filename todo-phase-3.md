@@ -122,7 +122,8 @@ flowchart TD
 - [x] Modificar el componente de portadas para que use `mupdf` para extraer la primera página (funciona para PDFs, EPUBs, etc.).
 
 ### Etapa 3.7: Pruebas y Verificación
-- [ ] Subir múltiples formatos (PDF, EPUB, Imágenes) y confirmar su escritura correcta en el directorio de servidor (ej. `back/uploads/`).
+- [x] Subir múltiples formatos (PDF, EPUB, Imágenes) y confirmar su escritura correcta en el directorio de servidor (ej. `back/uploads/`).
+- [x] No funciona con .epubs necesitamos arreglar esto
 - [ ] Confirmar que el tamaño (`size`) y tipo (`mimeType`) se mapean correctamente a la base de datos.
 - [ ] Inspeccionar peticiones de red del visor de PDFs en las herramientas de desarrollo del navegador para verificar que se lanzan requests con headers `Range: bytes=X-Y` y el servidor responde con status `206`.
 - [ ] Eliminar un documento y confirmar manualmente que se destruyó el archivo en el sistema de archivos del servidor (para evitar fugas de espacio en disco).

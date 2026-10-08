@@ -12,6 +12,7 @@ import {
   Eye,
 } from "@lucide/vue";
 import MupdfReader from "../components/readers/MupdfReader.vue";
+import EpubReader from "../components/readers/EpubReader.vue";
 import AlbumReader from "../components/readers/AlbumReader.vue";
 import ReportDialog from "../components/readers/ReportDialog.vue";
 import {
@@ -206,7 +207,7 @@ onBeforeUnmount(() => {
     <template v-if="denial"
       ><div class="access-denied">
         <RouterLink to="/" class="reader-brand"
-          ><BookOpen :size="24" />Framashare</RouterLink
+          ><img src="/icons/newLogo.svg" alt="" width="48" height="48" />Framashare</RouterLink
         >
         <div class="card">
           <Link2Off :size="40" stroke-width="1.3" />
@@ -295,11 +296,17 @@ onBeforeUnmount(() => {
         <p v-if="fileError" class="error" role="alert">{{ fileError }}</p>
       </div>
       <MupdfReader
-        v-else-if="publication?.format === 'pdf' || publication?.format === 'epub'"
+        v-else-if="publication?.format === 'pdf'"
         :key="fileVersion"
         :source="source || ''"
         :format="publication.format"
         :initial-page="publication.position"
+        @position="position"
+        @reselect="selectAgain" /><EpubReader
+        v-else-if="publication?.format === 'epub'"
+        :source="source || ''"
+        :initial-page="publication.position"
+        :sample="publication.seed"
         @position="position"
         @reselect="selectAgain" /><AlbumReader
         v-else-if="publication"
