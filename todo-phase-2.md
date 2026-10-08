@@ -76,10 +76,10 @@ flowchart TD
   - Generar el cliente actualizado (`pnpm dlx prisma generate`).
 
 ### Etapa 2.3: Servicios Auxiliares de Backend
-- [ ] **Servicio de Contraseñas (`back/src/services/password.service.ts`)**:
+- [x] **Servicio de Contraseñas (`back/src/services/password.service.ts`)**:
   - `hashPassword(password: string): Promise<string>`
   - `verifyPassword(password: string, hash: string): Promise<boolean>`
-- [ ] **Servicio de Correo (`back/src/services/email.service.ts`)**:
+- [x] **Servicio de Correo (`back/src/services/email.service.ts`)**:
   - Configurar transportador de Nodemailer.
   - Crear plantilla de correo para reseteo de contraseña con enlace único (`/reset-password?token=...`).
   - Función `sendPasswordResetEmail(to: string, resetLink: string): Promise<void>`.
