@@ -37,7 +37,16 @@ export async function upload(input: { title: string; description: string; format
 export function saveLink(documentId: string, input: Partial<SharingLink>, id?: string) { if (!input.name?.trim()) throw Error('Give this link a name.'); if (input.limit != null && (!Number.isInteger(input.limit) || input.limit < 1)) throw Error('Session limit must be a positive whole number.'); if (input.expiresAt != null && (!Number.isFinite(input.expiresAt) || input.expiresAt <= state.now)) throw Error('Choose a date in the future.'); const old = state.links.find(l => l.id === id); if (old) { Object.assign(old, input); return old } const link: SharingLink = { id: uid('link'), token: uid('read'), documentId, name: input.name, password: '', expiresAt: null, limit: null, used: 0, allowDownload: true, revoked: false, ...input }; state.links.push(link); return link }
 export function addReport(documentId: string, reason: string, description: string) { if (!reason || !description.trim()) throw Error('Choose a reason and describe the concern.'); state.reports.unshift({ id: uid('report'), documentId, reason, description, createdAt: state.now, status: 'open' }); notify('Report submitted') }
 export async function copyLink(path: string) { const url = new URL(path, location.origin).href; try { await navigator.clipboard.writeText(url); notify('Link copied') } catch { const field = Array.from(document.querySelectorAll<HTMLElement>('.url')).find(node => node.textContent?.trim() === url); if (field) { field.focus(); const range = document.createRange(); range.selectNodeContents(field); const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range) } notify('Copy unavailable. Select the link and copy it manually.') } return url }
-export function signIn(email: string, name?: string) { let account = state.accounts.find(a => a.email === email); if (!account) { account = { id: uid('account'), email, name: name || email.split('@')[0], quota: state.settings.quotaMB * 1000000, role: 'author' }; state.accounts.push(account) } state.currentUserId = account.id; return account }
+
+// Auth
+export async function apiRegister(data: any) { const res = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); if (!res.ok) { const err = await res.json(); throw Error(err.error || 'Registration failed'); } const result = await res.json(); const account = result.user; account.quota = Number(account.quota); if (!state.accounts.find(a => a.id === account.id)) state.accounts.push(account); state.currentUserId = account.id; return account; }
+export async function apiLogin(data: any) { const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); if (!res.ok) { const err = await res.json(); throw Error(err.error || 'Invalid credentials'); } const result = await res.json(); const account = result.user; account.quota = Number(account.quota); const idx = state.accounts.findIndex(a => a.id === account.id); if (idx === -1) state.accounts.push(account); else state.accounts[idx] = account; state.currentUserId = account.id; return account; }
+export async function apiLogout() { await fetch('/api/auth/logout', { method: 'POST' }); state.currentUserId = null; }
+export async function apiGetMe() { try { const res = await fetch('/api/auth/me'); if (res.ok) { const result = await res.json(); const account = result.user; account.quota = Number(account.quota); const idx = state.accounts.findIndex(a => a.id === account.id); if (idx === -1) state.accounts.push(account); else state.accounts[idx] = account; state.currentUserId = account.id; return account; } else { state.currentUserId = null; } } catch (err) {} return null; }
+export async function apiForgotPassword(email: string) { const res = await fetch('/api/auth/forgot-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) }); if (!res.ok) { const err = await res.json(); throw Error(err.error || 'Request failed'); } return await res.json(); }
+export async function apiResetPassword(data: any) { const res = await fetch('/api/auth/reset-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); if (!res.ok) { const err = await res.json(); throw Error(err.error || 'Reset failed'); } return await res.json(); }
+
+
 export function imageSource(d: Publication, index: number) { const item = d.images[index]; return d.seed ? item?.src : files.get(d.id)?.urls[Number(item?.src)] }
 
 if (typeof window !== 'undefined') 
@@ -63,4 +72,6 @@ if (typeof window !== 'undefined')
 		const wall = Date.now();
 		state.now += wall - lastTick;
 		lastTick = wall }, 1000);
+	apiGetMe();
 	}
+	

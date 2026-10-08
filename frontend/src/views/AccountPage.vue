@@ -2,7 +2,7 @@
 import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { BookOpen, Eye, EyeOff, ArrowLeft, Check, Mail } from "@lucide/vue";
-import { delay, signIn, notify } from "../services/store";
+import { delay, apiLogin, apiRegister, apiForgotPassword, apiResetPassword, notify } from "../services/store";
 const route = useRoute(),
   router = useRouter(),
   email = ref(""),
@@ -70,19 +70,32 @@ async function submit() {
   }
   busy.value = true;
   try {
-    await delay();
-    if (forgot.value || reset.value) {
+    if (forgot.value) {
+      await apiForgotPassword(email.value.trim().toLowerCase());
+      done.value = true;
+    } else if (reset.value) {
+      const token = route.query.token as string;
+      if (!token) throw new Error("Missing reset token in URL");
+      await apiResetPassword({ token, newPassword: password.value });
       done.value = true;
       password.value = "";
       confirm.value = "";
-      if (reset.value) notify("Password reset simulated");
-    } else {
-      signIn(
-        email.value.trim().toLowerCase(),
-        signup.value ? name.value.trim() : undefined
-      );
+      notify("Password reset successful");
+    } else if (signup.value) {
+      await apiRegister({
+        email: email.value.trim().toLowerCase(),
+        password: password.value
+      });
       password.value = "";
-      notify(signup.value ? "Account created" : "Signed in");
+      notify("Account created");
+      await router.push(target.value);
+    } else {
+      await apiLogin({
+        email: email.value.trim().toLowerCase(),
+        password: password.value
+      });
+      password.value = "";
+      notify("Signed in");
       await router.push(target.value);
     }
   } catch (e) {
@@ -142,12 +155,12 @@ async function submit() {
           <p>
             {{
               forgot
-                ? `A reset message for ${email} has been simulated. No email was sent.`
-                : "Your new password has been accepted in this local demonstration."
+                ? `If that email exists, we have sent a reset link to ${email}.`
+                : "Your new password has been saved."
             }}
           </p>
-          <RouterLink v-if="forgot" class="button" :to="link('/reset-password')"
-            >Open demo reset link</RouterLink
+          <RouterLink v-if="forgot" class="button" :to="link('/sign-in')"
+            >Back to sign in</RouterLink
           ><RouterLink v-else class="button" :to="link('/sign-in')"
             >Back to sign in</RouterLink
           >

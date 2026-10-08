@@ -11,6 +11,7 @@ import {
   delay,
   notify,
   deleteDocument,
+  apiLogout,
 } from "../services/store";
 const route = useRoute(),
   router = useRouter(),
@@ -101,8 +102,8 @@ async function savePassword() {
     busy.value = false;
   }
 }
-function logout() {
-  state.currentUserId = null;
+async function logout() {
+  await apiLogout();
   notify("Signed out");
   router.push("/sign-in");
 }

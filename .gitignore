@@ -36,4 +36,6 @@ docs/design/verification/
 # Prisma and Backend
 back/prisma/generated/
 back/dist/
+.pnpm-store/
 .env
+migrations/

@@ -85,7 +85,7 @@ flowchart TD
   - Función `sendPasswordResetEmail(to: string, resetLink: string): Promise<void>`.
 
 ### Etapa 2.4: Rutas y Controladores de Autenticación (`/api/auth`)
-- [ ] Crear módulo de rutas `back/src/routes/auth.routes.ts`:
+- [x] Crear módulo de rutas `back/src/routes/auth.routes.ts`:
   - `POST /api/auth/register`:
     - Validar email válido y contraseña de al menos 8 caracteres.
     - Comprobar que el email no exista previamente.
@@ -108,27 +108,27 @@ flowchart TD
     - Validar token recibido: no expirado y no usado previamente.
     - Hashear la nueva contraseña y actualizar el usuario.
     - Marcar el token como usado (`used = true`).
-- [ ] Registrar las rutas y plugins en `back/src/index.ts`.
+- [x] Registrar las rutas y plugins en `back/src/index.ts`.
 
 ### Etapa 2.5: Middleware de Protección de Rutas
-- [ ] Crear hook `preHandler` en Fastify (`back/src/middlewares/auth.middleware.ts`):
+- [x] Crear hook `preHandler` en Fastify (`back/src/middlewares/auth.middleware.ts`):
   - Verificar firma de la cookie o token en la petición.
   - Inyectar el usuario autenticado en `request.user`.
   - Retornar error `401 Unauthorized` si no está autenticado o la sesión expiró.
 
 ### Etapa 2.6: Integración con el Frontend (Vue 3)
-- [ ] Modificar `frontend/src/services/store.ts`:
+- [x] Modificar `frontend/src/services/store.ts`:
   - Reemplazar array de usuarios simulados y función mock `signIn` por llamadas HTTP a `/api/auth/*`.
   - Crear métodos API: `apiRegister`, `apiLogin`, `apiLogout`, `apiGetMe`, `apiForgotPassword`, `apiResetPassword`.
   - Inicializar la sesión en el arranque comprobando `/api/auth/me`.
-- [ ] Conectar `frontend/src/views/AccountPage.vue`:
+- [x] Conectar `frontend/src/views/AccountPage.vue`:
   - Adaptar los formularios de inicio de sesión, registro, recuperación y reseteo a las respuestas reales del backend.
   - Mostrar mensajes de error reales devueltos por la API (ej. credenciales inválidas, email duplicado, token caducado).
 
 ### Etapa 2.7: Pruebas y Verificación
-- [ ] Probar registro de usuario nuevo y confirmación en base de datos.
-- [ ] Probar login con credenciales correctas e incorrectas (verificar bloqueo y mensajes).
-- [ ] Probar persistencia de sesión al recargar la página en el navegador.
-- [ ] Probar cierre de sesión (logout) y verificación de eliminación de sesión.
-- [ ] Probar flujo completo de recuperación: solicitud de reseteo, generación de token, cambio de contraseña e intento con token ya usado o caducado.
+- [x] Probar registro de usuario nuevo y confirmación en base de datos.
+- [x] Probar login con credenciales correctas e incorrectas (verificar bloqueo y mensajes).
+- [x] Probar persistencia de sesión al recargar la página en el navegador.
+- [x] Probar cierre de sesión (logout) y verificación de eliminación de sesión.
+- [x] Probar flujo completo de recuperación: solicitud de reseteo, generación de token, cambio de contraseña e intento con token ya usado o caducado.
 
