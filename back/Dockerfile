@@ -15,8 +15,7 @@ RUN corepack enable pnpm
 COPY package.json ./
 
 # Configure pnpm to allow native build scripts and install all dependencies
-RUN pnpm config set allow-builds "bcrypt,prisma,@prisma/engines,@prisma/client" && \
-    pnpm install
+RUN pnpm install --allow-build bcrypt --allow-build prisma --allow-build @prisma/engines --allow-build @prisma/client --allow-build esbuild
 
 # Copy configuration and source files
 COPY tsconfig.json ./
@@ -24,7 +23,7 @@ COPY prisma ./prisma
 COPY src ./src
 
 # Generate Prisma Client
-RUN pnpm dlx prisma generate --schema=prisma/schema.prisma
+RUN pnpm exec prisma generate --schema=prisma/schema.prisma
 
 # Build TypeScript to JavaScript (dist/)
 RUN pnpm run build

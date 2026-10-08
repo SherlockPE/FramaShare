@@ -71,7 +71,7 @@ flowchart TD
   - `expiresAt` (`DateTime`).
   - `used` (`Boolean @default(false)`).
   - `createdAt` (`DateTime @default(now())`).
-- [ ] Ejecutar migración de Prisma:
+- [x] Ejecutar migración de Prisma:
   - `pnpm dlx prisma migrate dev --name add_auth_and_reset_tokens`.
   - Generar el cliente actualizado (`pnpm dlx prisma generate`).
 

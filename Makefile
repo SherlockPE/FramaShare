@@ -26,7 +26,7 @@ db-down:
 
 # Run Prisma Migrations and generate client
 db-migrate:
-	cd back && pnpm dlx prisma migrate dev && pnpm dlx prisma generate
+	cd back && pnpm exec prisma migrate dev && pnpm exec prisma generate
 
 # Colorcitos down ñeheheheh
 # ⣿⣿⣿⠟⠛⠛⠻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡟⢋⣩⣉⢻⣿⡇
