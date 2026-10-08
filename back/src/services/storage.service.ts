@@ -2,6 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import crypto from 'node:crypto';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Use environment variable or default to 'uploads' in the root of the project
 const STORAGE_PATH = process.env.STORAGE_PATH || path.join(__dirname, '../../uploads');

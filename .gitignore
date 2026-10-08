@@ -39,3 +39,6 @@ back/dist/
 .pnpm-store/
 .env
 migrations/
+
+# Backend fle uploads
+uploads/

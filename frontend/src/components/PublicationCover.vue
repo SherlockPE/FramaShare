@@ -21,10 +21,14 @@ async function renderCover() {
     const buffer = await response.arrayBuffer();
     
     // Determine the magic format based on file extension or format
-    const magic = props.document.format === 'epub' ? "application/epub+zip" : "application/pdf";
+    const magic = props.document.format === 'epub' ? "epub" : "pdf";
 
     // Open document
     const doc = mupdf.Document.openDocument(new Uint8Array(buffer), magic);
+    
+    if (props.document.format === 'epub') {
+      doc.layout(400, 600, 12);
+    }
     
     // Load first page
     const page = doc.loadPage(0);
@@ -47,7 +51,7 @@ async function renderCover() {
     canvas.value.height = height;
 
     const imageData = new ImageData(
-      pixmap.getPixels(),
+      pixmap.getPixels() as any,
       width,
       height
     );

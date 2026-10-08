@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, shallowRef, onBeforeUnmount, watch, nextTick, computed, onMounted } from 'vue';
 import * as mupdf from "mupdf";
-import { ChevronLeft, ChevronRight, PanelLeft, RotateCw, ZoomIn, ZoomOut, X } from '@lucide/vue';
+import { ChevronLeft, ChevronRight, PanelLeft, RotateCw, ZoomIn, ZoomOut, X, BookOpen, File } from '@lucide/vue';
 
 const props = defineProps<{ source: string; initialPage: number; format: string }>();
 const emit = defineEmits<{
@@ -13,7 +13,8 @@ const doc = shallowRef<mupdf.Document>(), canvas = ref<HTMLCanvasElement>(), sta
     title: string;
     page: number
 }[]>([]);
-let resize: ResizeObserver | undefined, loadId = 0;
+const viewMode = ref<'single' | 'double'>('single');
+let resize: ResizeObserver | undefined, loadId = 0, lastRenderedPage = 0;
 const count = computed(() => doc.value?.countPages() || 0);
 
 async function load() {
@@ -27,8 +28,12 @@ async function load() {
 
         if (id !== loadId) return;
 
-        const magic = props.format === 'epub' ? 'application/epub+zip' : 'application/pdf';
+        const magic = props.format === 'epub' ? 'epub' : 'pdf';
         const loaded = mupdf.Document.openDocument(new Uint8Array(buffer), magic);
+        
+        if (props.format === 'epub') {
+            loaded.layout(800, 1000, 16);
+        }
         
         doc.value = loaded;
         page.value = Math.min(Math.max(1, page.value), loaded.countPages());
@@ -62,7 +67,7 @@ async function load() {
             c.height = height;
             const ctx = c.getContext('2d');
             if (ctx) {
-                const imgData = new ImageData(pixmap.getPixels(), width, height);
+                const imgData = new ImageData(pixmap.getPixels() as any, width, height);
                 ctx.putImageData(imgData, 0, 0);
                 thumbnails.push(c.toDataURL());
             }
@@ -82,12 +87,20 @@ async function render() {
     if (!doc.value || !canvas.value || !stage.value) return;
     rendering.value = true;
     try {
-        let p;
-        try { p = doc.value.loadPage(page.value - 1); } catch (e) { throw new Error('loadPage failed: ' + e); }
-        let bounds;
-        try { bounds = p.getBounds(); } catch (e) { throw new Error('getBounds failed: ' + e); }
-        const nativeWidth = bounds[2] - bounds[0];
-        const nativeHeight = bounds[3] - bounds[1];
+        const pagesToLoad = viewMode.value === 'double' && page.value < doc.value.countPages() 
+            ? [page.value - 1, page.value] 
+            : [page.value - 1];
+            
+        let validPages = [];
+        for (const pIdx of pagesToLoad) {
+            try { validPages.push(doc.value.loadPage(pIdx)); } catch (e) { console.error('loadPage failed', e); }
+        }
+        if (validPages.length === 0) throw new Error('Failed to load any pages');
+
+        let boundsList = validPages.map(p => p.getBounds());
+        
+        const nativeWidth = boundsList.reduce((acc, b) => acc + (b[2] - b[0]), 0);
+        const nativeHeight = Math.max(...boundsList.map(b => b[3] - b[1]));
         
         const available = Math.max(220, stage.value.clientWidth - 48);
         const actual = fit.value === 'width' ? Math.min(available / nativeWidth, 2) : fit.value === 'page' ? Math.min(available / nativeWidth, Math.max(280, stage.value.clientHeight - 48) / nativeHeight) : scale.value;
@@ -101,27 +114,45 @@ async function render() {
             matrix = mupdf.Matrix.concat(matrix, mupdf.Matrix.rotate(rotation.value));
         }
         
-        let pixmap;
-        try { pixmap = p.toPixmap(matrix, mupdf.ColorSpace.DeviceRGB, true, true); } catch (e) { throw new Error('toPixmap failed: ' + e); }
+        const pixmaps = validPages.map(p => p.toPixmap(matrix, mupdf.ColorSpace.DeviceRGB, true, true));
         
-        const c = canvas.value;
-        const width = pixmap.getWidth();
-        const height = pixmap.getHeight();
-        c.width = width;
-        c.height = height;
-        c.style.width = `${width / ratio}px`;
-        c.style.height = `${height / ratio}px`;
+        const updateDOM = () => {
+            const c = canvas.value;
+            if (!c) return;
+            const totalWidth = pixmaps.reduce((acc, pm) => acc + pm.getWidth(), 0);
+            const maxHeight = Math.max(...pixmaps.map(pm => pm.getHeight()));
+            
+            c.width = totalWidth;
+            c.height = maxHeight;
+            c.style.width = `${totalWidth / ratio}px`;
+            c.style.height = `${maxHeight / ratio}px`;
+            
+            const ctx = c.getContext('2d');
+            if (ctx) {
+                ctx.clearRect(0, 0, c.width, c.height);
+                let currentX = 0;
+                for (const pixmap of pixmaps) {
+                    const width = pixmap.getWidth();
+                    const height = pixmap.getHeight();
+                    const pixels = pixmap.getPixels();
+                    const imgData = new ImageData(pixels as any, width, height);
+                    
+                    const tempC = document.createElement('canvas');
+                    tempC.width = width;
+                    tempC.height = height;
+                    tempC.getContext('2d')?.putImageData(imgData, 0, 0);
+                    
+                    ctx.drawImage(tempC, currentX, 0);
+                    currentX += width;
+                }
+            }
+            
+            // Clean up wasm resources after drawing
+            for (const pixmap of pixmaps) pixmap.destroy();
+            for (const p of validPages) p.destroy();
+        };
         
-        const ctx = c.getContext('2d');
-        if (ctx) {
-            let pixels;
-            try { pixels = pixmap.getPixels(); } catch (e) { throw new Error('getPixels failed: ' + e); }
-            const imgData = new ImageData(pixels, width, height);
-            ctx.putImageData(imgData, 0, 0);
-        }
-        
-        pixmap.destroy();
-        p.destroy();
+        updateDOM();
         
         emit('position', page.value);
     } catch (e) {
@@ -136,10 +167,10 @@ function go(value: number) { page.value = Math.max(1, Math.min(count.value || 1,
 function zoom(delta: number) { fit.value = 'custom'; scale.value = Math.min(3, Math.max(.25, scale.value + delta)) }
 function chooseZoom(e: Event) { const value = (e.target as HTMLSelectElement).value; if (['width', 'page'].includes(value)) fit.value = value; else { fit.value = 'custom'; scale.value = Number(value) } }
 
-function keyboard(e: KeyboardEvent) { if ((e.target as HTMLElement)?.closest('input,textarea,select,button')) return; if (e.key === 'ArrowRight') { e.preventDefault(); go(page.value + 1) } if (e.key === 'ArrowLeft') { e.preventDefault(); go(page.value - 1) } if (e.key === 'Escape') panel.value = '' }
+function keyboard(e: KeyboardEvent) { if ((e.target as HTMLElement)?.closest('input,textarea,select,button')) return; if (e.key === 'ArrowRight') { e.preventDefault(); go(page.value + (viewMode.value === 'double' ? 2 : 1)) } if (e.key === 'ArrowLeft') { e.preventDefault(); go(page.value - (viewMode.value === 'double' ? 2 : 1)) } if (e.key === 'Escape') panel.value = '' }
 
 watch(() => props.source, load, { immediate: true });
-watch([page, scale, fit, rotation], () => { nextTick(render) });
+watch([page, scale, fit, rotation, viewMode], () => { nextTick(render) });
 watch(panel, () => nextTick(render));
 
 onMounted(() => {
@@ -163,12 +194,12 @@ onBeforeUnmount(() => {
                 <PanelLeft :size="18" />
             </button>
             <div class="page-control">
-                <button class="icon-button" aria-label="Previous page" :disabled="page <= 1" @click="go(page - 1)">
+                <button class="icon-button" aria-label="Previous page" :disabled="page <= 1" @click="go(page - (viewMode === 'double' ? 2 : 1))">
                     <ChevronLeft :size="18" />
                 </button><label><span class="sr-only">Page number</span><input v-model.number="pageEntry" type="number"
                         min="1" :max="count || 1" @change="go(pageEntry)" @keydown.enter="go(pageEntry)" /></label><span
                     class="small muted">/ {{ count || "–" }}</span><button class="icon-button" aria-label="Next page"
-                    :disabled="page >= count" @click="go(page + 1)">
+                    :disabled="page >= count" @click="go(page + (viewMode === 'double' ? 2 : 1))">
                     <ChevronRight :size="18" />
                 </button>
             </div>
@@ -190,6 +221,9 @@ onBeforeUnmount(() => {
                     <ZoomIn :size="18" />
                 </button><button class="icon-button" aria-label="Rotate page" @click="rotation = (rotation + 90) % 360">
                     <RotateCw :size="18" />
+                </button><button class="icon-button" aria-label="Toggle two-page view" @click="viewMode = viewMode === 'single' ? 'double' : 'single'">
+                    <BookOpen v-if="viewMode === 'single'" :size="18" />
+                    <File v-else :size="18" />
                 </button>
             </div>
         </div>
@@ -221,6 +255,12 @@ onBeforeUnmount(() => {
                     </button></template>
             </aside>
             <div ref="stage" class="document-stage" :aria-busy="loading || rendering">
+                <button v-show="!loading && !error && page > 1" class="side-nav-button prev-button" aria-label="Previous page" @click="go(page - (viewMode === 'double' ? 2 : 1))">
+                    <ChevronLeft :size="32" />
+                </button>
+                <button v-show="!loading && !error && page < count" class="side-nav-button next-button" aria-label="Next page" @click="go(page + (viewMode === 'double' ? 2 : 1))">
+                    <ChevronRight :size="32" />
+                </button>
                 <div v-if="loading" class="reader-message" role="status">
                     Opening your document…
                 </div>
@@ -317,11 +357,43 @@ onBeforeUnmount(() => {
     box-shadow: 0 2px 8px #00000013;
     background: white;
     line-height: 0;
+    view-transition-name: document-page;
 }
 
 .document-sheet canvas {
     display: block;
     max-width: none;
+}
+
+.side-nav-button {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transition: opacity 0.2s, background 0.2s;
+    color: var(--text);
+}
+
+.side-nav-button:hover {
+    background: #f0f0f0;
+}
+
+.prev-button {
+    left: 24px;
+}
+
+.next-button {
+    right: 24px;
 }
 
 .reader-panel {
@@ -400,6 +472,16 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 800px) {
+    .side-nav-button {
+        width: 44px;
+        height: 44px;
+    }
+    .prev-button {
+        left: 12px;
+    }
+    .next-button {
+        right: 12px;
+    }
     .format-toolbar {
         padding: 8px;
         gap: 6px;
@@ -475,3 +557,5 @@ onBeforeUnmount(() => {
     }
 }
 </style>
+
+
