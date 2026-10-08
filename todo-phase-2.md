@@ -57,7 +57,7 @@ flowchart TD
   - `DATABASE_URL` (conexión a PostgreSQL).
   - `JWT_SECRET` / `COOKIE_SECRET` (claves seguras para firma de tokens y cookies).
   - Configuración SMTP: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `FROM_EMAIL`.
-  - Soporte para entorno local de pruebas de email (Ethereal o contenedor Mailpit).
+  - Soporte para entorno local de pruebas de email (Ethereal o servicio local Mailpit).
 
 ### Etapa 2.2: Esquema de Base de Datos y Migración Prisma
 - [x] Actualizar el modelo `User` en `back/prisma/schema.prisma`:
