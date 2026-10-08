@@ -18,6 +18,8 @@ services:
       context: ./back
       dockerfile: Dockerfile
     restart: always
+    env_file:
+      - ./back/.env
     environment:
       DATABASE_URL: postgresql://admin:password123@db:5432/miapp_db?schema=public
       PORT: 3000
