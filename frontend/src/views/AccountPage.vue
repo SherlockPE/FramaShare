@@ -2,7 +2,7 @@
 import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { BookOpen, Eye, EyeOff, ArrowLeft, Check, Mail } from "@lucide/vue";
-import { delay, signIn, notify } from "../services/store";
+import { signIn, notify } from "../services/store";
 const route = useRoute(),
   router = useRouter(),
   email = ref(""),
@@ -70,15 +70,12 @@ async function submit() {
   }
   busy.value = true;
   try {
-    await delay();
     if (forgot.value || reset.value) {
-      done.value = true;
-      password.value = "";
-      confirm.value = "";
-      if (reset.value) notify("Password reset simulated");
+      throw Error("Password reset is not available yet. SMTP integration is pending.");
     } else {
-      signIn(
+      await signIn(
         email.value.trim().toLowerCase(),
+        password.value,
         signup.value ? name.value.trim() : undefined
       );
       password.value = "";
@@ -229,8 +226,7 @@ async function submit() {
           ><ArrowLeft :size="16" /> Back to sign in</RouterLink
         >
         <p class="demo-note">
-          Local prototype. Accounts and emails are simulated.<br />Demo: alex@example.com
-          / readingroom
+          Accounts and PDF uploads are stored on the server.<br />Password reset is not available yet.
         </p>
       </div>
     </section>

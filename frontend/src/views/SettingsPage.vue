@@ -11,6 +11,9 @@ import {
   delay,
   notify,
   deleteDocument,
+  updateProfile,
+  changePassword,
+  signOut,
 } from "../services/store";
 const route = useRoute(),
   router = useRouter(),
@@ -62,12 +65,8 @@ async function saveProfile() {
   }
   busy.value = true;
   try {
-    await delay();
-    if (user.value) {
-      user.value.name = name.value.trim();
-      user.value.email = email.value.trim().toLowerCase();
-      notify("Profile saved");
-    }
+    await updateProfile(name.value.trim(), email.value.trim().toLowerCase());
+    notify("Profile saved");
   } catch (e) {
     error.value = (e as Error).message;
   } finally {
@@ -77,7 +76,7 @@ async function saveProfile() {
 async function savePassword() {
   error.value = "";
   if (oldPassword.value.length < 8) {
-    error.value = "Enter your current password (at least 8 characters in this demo).";
+    error.value = "Enter your current password.";
     return;
   }
   if (password.value.length < 8) {
@@ -90,34 +89,25 @@ async function savePassword() {
   }
   busy.value = true;
   try {
-    await delay();
-    oldPassword.value = "";
-    password.value = "";
-    confirm.value = "";
-    notify("Password change simulated");
+    await changePassword(oldPassword.value, password.value);
+    oldPassword.value = ""; password.value = ""; confirm.value = "";
+    notify("Password changed. Sign in again.");
+    router.push("/sign-in");
   } catch (e) {
     error.value = (e as Error).message;
   } finally {
     busy.value = false;
   }
 }
-function logout() {
-  state.currentUserId = null;
-  notify("Signed out");
-  router.push("/sign-in");
+async function logout() {
+  try { await signOut(); notify("Signed out"); router.push("/sign-in"); }
+  catch (e) { error.value = (e as Error).message; }
 }
 async function deleteAccount() {
   if (deletionText.value !== "DELETE" || !user.value) return;
   busy.value = true;
   try {
-    await delay();
-    const id = user.value.id;
-    state.documents.filter((d) => d.ownerId === id).forEach((d) => deleteDocument(d.id));
-    state.accounts = state.accounts.filter((a) => a.id !== id);
-    state.currentUserId = null;
-    deleting.value = false;
-    notify("Account and its publications deleted");
-    router.push("/");
+    throw Error("Account deletion is not available yet.");
   } catch (e) {
     error.value = (e as Error).message;
   } finally {
@@ -283,7 +273,7 @@ async function deleteAccount() {
         stops all their sharing links. Readers will lose access.
       </p>
       <p class="muted small">
-        This action is a local simulation and cannot be undone without resetting the demo.
+        Account deletion is not available in this implementation stage.
       </p>
       <label class="field"
         >Type DELETE to confirm<input v-model="deletionText" autocomplete="off"

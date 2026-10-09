@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PublicationLicense from "../components/PublicationLicense.vue";
 import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { BookOpen, LockKeyhole, Eye, EyeOff, Link2Off } from "@lucide/vue";
@@ -92,7 +93,8 @@ async function start() {
             {{ formatSize(publication?.size || 0) }}</span
           >
           <h1>{{ publication?.title }}</h1>
-          <p class="muted">{{ publication?.description }}</p></template
+          <p class="muted">{{ publication?.description }}</p>
+          <PublicationLicense v-if="publication" :publication="publication" /></template
         >
         <form class="stack" @submit.prevent="start">
           <label v-if="privateGate" class="field"

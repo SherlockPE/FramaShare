@@ -1,0 +1,9 @@
+ALTER TABLE "User" ADD COLUMN "name" TEXT NOT NULL DEFAULT '',
+ADD COLUMN "role" TEXT NOT NULL DEFAULT 'author',
+ADD COLUMN "quota" INTEGER NOT NULL DEFAULT 1000000000;
+CREATE TABLE "AuthSession" (
+  "tokenHash" TEXT PRIMARY KEY,
+  "userId" TEXT NOT NULL REFERENCES "User"("id") ON DELETE CASCADE,
+  "expiresAt" TIMESTAMP(3) NOT NULL
+);
+CREATE INDEX "AuthSession_userId_idx" ON "AuthSession"("userId");

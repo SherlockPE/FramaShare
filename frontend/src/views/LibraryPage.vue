@@ -21,6 +21,7 @@ import {
   formatDate,
   deleteDocument,
   notify,
+  refreshLibrary,
 } from "../services/store";
 import type { Publication } from "../services/store";
 const router = useRouter(),
@@ -55,9 +56,9 @@ const docs = computed(() => {
         : b.createdAt - a.createdAt
     );
 });
-function remove() {
+async function remove() {
   if (deleting.value) {
-    deleteDocument(deleting.value.id);
+    try { await deleteDocument(deleting.value.id); } catch (e) { notify((e as Error).message); return; }
     notify("Publication deleted");
     deleting.value = undefined;
   }
@@ -232,6 +233,8 @@ function preview(d: Publication) {
                 ? "✓ Ready"
                 : d.status === "failed"
                 ? "! Failed"
+                : d.status === "deleting"
+                ? "Deletion pending — retry delete"
                 : "◷ Processing"
             }}</span
             ><span class="small muted"

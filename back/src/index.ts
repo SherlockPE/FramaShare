@@ -1,26 +1,10 @@
-import Fastify from 'fastify'
-import cors from '@fastify/cors'
+import { createServer } from './app.js';
 
-const server = Fastify({
-  logger: true
-})
-
-server.register(cors, {
-  origin: '*' // Configure this appropriately for production
-})
-
-server.get('/api/health', async (request, reply) => {
-  return { status: 'ok', timestamp: new Date().toISOString() }
-})
-
-const start = async () => {
-  try {
-    await server.listen({ port: 3000, host: '0.0.0.0' })
-    server.log.info(`Server listening on http://localhost:3000`)
-  } catch (err) {
-    server.log.error(err)
-    process.exit(1)
-  }
+try {
+  const server = await createServer();
+  await server.listen({ port: Number(process.env.PORT ?? 3000), host: process.env.HOST ?? '127.0.0.1' });
+  for (const signal of ['SIGINT', 'SIGTERM'] as const) process.once(signal, () => { void server.close(); });
+} catch (error) {
+  console.error(error);
+  process.exit(1);
 }
-
-start()

@@ -16,9 +16,9 @@ install:
 build:
 	pnpm run build
 
-# Start Docker Compose (PostgreSQL, Proxy, Backend)
+# Start the local PostgreSQL container
 db-up:
-	docker compose up -d
+	docker compose up -d db
 
 # Stop Docker Compose
 db-down:
@@ -26,7 +26,7 @@ db-down:
 
 # Run Prisma Migrations and generate client
 db-migrate:
-	cd back && pnpm dlx prisma migrate dev && pnpm dlx prisma generate
+	cd back && pnpm exec prisma migrate deploy && pnpm exec prisma generate
 
 # Colorcitos down ñeheheheh
 # ⣿⣿⣿⠟⠛⠛⠻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡟⢋⣩⣉⢻⣿⡇

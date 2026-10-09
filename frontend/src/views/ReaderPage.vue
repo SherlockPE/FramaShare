@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PublicationLicense from "../components/PublicationLicense.vue";
 import { computed, ref, onMounted, onBeforeUnmount } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
@@ -81,14 +82,12 @@ const denial = computed(() => {
 const fileVersion = ref(0);
 const source = computed(() => {
   fileVersion.value;
-  return publication.value?.seed
-    ? publication.value.source
-    : files.get(publication.value?.id || "")?.urls[0];
+  return publication.value?.source || files.get(publication.value?.id || "")?.urls[0];
 });
 const missingFile = computed(() => {
   fileVersion.value;
   const d = publication.value;
-  return !!d && !d.seed && !files.has(d.id);
+  return !!d && !d.seed && !d.source && !files.has(d.id);
 });
 const back = computed(() => {
   if (typeof route.query.return === "string" && route.query.return.startsWith("/"))
@@ -237,6 +236,7 @@ onBeforeUnmount(() => {
         <div class="reader-title">
           <span class="small muted">{{ publication?.format.toUpperCase() }} reader</span>
           <h1>{{ publication?.title }}</h1>
+          <PublicationLicense v-if="publication" :publication="publication" />
         </div>
         <div class="row reader-actions">
           <button

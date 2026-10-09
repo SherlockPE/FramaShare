@@ -3,7 +3,7 @@ import { ref, watch, onMounted, onBeforeUnmount, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { BookOpen, Menu, X, Upload, Library, Shield, UserRound } from "@lucide/vue";
 import UiMenu from "./components/UiMenu.vue";
-import { currentUser, state, ui, notify } from "./services/store";
+import { currentUser, state, ui, notify, signOut, initializeSession } from "./services/store";
 const route = useRoute(),
   router = useRouter(),
   mobile = ref(false);
@@ -18,10 +18,13 @@ function key(e: KeyboardEvent) {
 }
 onMounted(() => document.addEventListener("keydown", key));
 onBeforeUnmount(() => document.removeEventListener("keydown", key));
-function logout() {
-  state.currentUserId = null;
-  notify("Signed out");
-  router.push("/");
+async function logout() {
+  try { await signOut(); notify("Signed out"); router.push("/"); }
+  catch (error) { notify((error as Error).message); }
+}
+async function retrySession() {
+  try { await initializeSession(); await router.replace(location.pathname + location.search); }
+  catch { /* The session error remains visible. */ }
 }
 </script>
 <template>
@@ -72,11 +75,12 @@ function logout() {
         user ? "My library" : "Sign in"
       }}</RouterLink
       ><RouterLink v-if="user" to="/app/settings/profile">Settings</RouterLink
-      ><RouterLink to="/overview">Prototype overview</RouterLink>
+      >
     </nav></template
   >
   <main id="main">
-    <RouterView :key="route.path.startsWith('/upload') ? 'upload' : route.path" />
+    <div v-if="ui.sessionError" class="page alert error" role="alert">Unable to load your account: {{ ui.sessionError }} <button class="button secondary" @click="retrySession">Try again</button></div>
+    <RouterView v-else :key="route.path.startsWith('/upload') ? 'upload' : route.path" />
   </main>
   <footer v-if="!isReader" class="site-footer">
     <RouterLink to="/" class="brand"><BookOpen :size="20" />Framashare</RouterLink>
@@ -84,15 +88,14 @@ function logout() {
     <div class="row wrap">
       <RouterLink to="/privacy">Privacy</RouterLink
       ><RouterLink to="/terms">Terms</RouterLink><RouterLink to="/help">Help</RouterLink
-      ><RouterLink to="/overview">Prototype overview</RouterLink>
+      >
     </div>
   </footer>
   <div v-if="ui.toast" class="toast" role="status">{{ ui.toast }}</div>
   <div v-if="ui.storageError" class="storage-notice alert" role="alert">
-    Local storage is unavailable. You can continue in memory; changes will be lost on
-    reload.
+    Local reading preferences cannot be saved. Your account and publications remain on the server.
     <button class="button secondary" @click="ui.storageError = false">
-      Continue in memory
+      Dismiss
     </button>
   </div>
 </template>

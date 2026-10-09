@@ -69,13 +69,13 @@ Skills: `frontend-design` for visual direction → `Impeccable` to refine the wh
 
 Architecture: modular monolith and a separate processing process. Redis, Kubernetes, and microservices are not needed at the start. For a public catalog, add server-side metadata pages for SEO; this does not require remaking the reader itself.
 
-**Application code: I propose AGPL-3.0-or-later**, ultimately agreed with Framasoft. Libraries can remain MIT/Apache/BSD; fonts OFL, PostgreSQL on its own free license. PDF.js has Apache-2.0, EPUB.js BSD-2-Clause, Readium BSD-3-Clause. Full table and source texts in the [candidate audit](architecture.md). According to the [GNU explanation](https://www.gnu.org/licenses/why-affero-gpl.html), the AGPL foresees network users' access to the sources of the modified service.
+**Application code is now licensed under AGPL-3.0-or-later**; see [LICENSE](../../LICENSE). Libraries retain their own MIT/Apache/BSD licenses; fonts retain OFL, PostgreSQL its own free license. PDF.js has Apache-2.0, EPUB.js BSD-2-Clause, Readium BSD-3-Clause. Full table and source texts in the [candidate audit](architecture.md). According to the [GNU explanation](https://www.gnu.org/licenses/why-affero-gpl.html), the AGPL foresees network users' access to the sources of the modified service.
 
-Before release, audit specific versions and indirect dependencies, generate an SBOM, and keep LICENSE/NOTICE, including for containers, fonts, and converters. Today, an application lockfile does not exist, so the license of the entire future product cannot be confirmed yet.
+Before release, audit specific versions and indirect dependencies, generate an SBOM, and keep LICENSE/NOTICE, including for containers, fonts, and converters. The repository's AGPL license does not replace third-party license obligations.
 
 ## How to implement
 
-1. Agree on style, public catalog versus sharing, author accounts, EPUB scope, and project license. Save decisions in `PRODUCT.md` / `DESIGN.md`.
+1. Agree on style, public catalog versus sharing, author accounts, and EPUB scope. Save decisions in `PRODUCT.md` / `DESIGN.md`.
 2. Make a small PDF/EPUB prototype on real large and problematic files. Check quality, mobile, accessibility, and EPUB isolation before persisting the adapter.
 3. Build the full PDF flow: account → upload → quarantine → preview → link → unlock → revoke. Add EPUB and albums to the same publication and permissions model.
 4. Close administration, limits, retention, export, reporting, and processing failure handling.

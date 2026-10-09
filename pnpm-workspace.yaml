@@ -1,8 +1,11 @@
 packages:
   - 'frontend'
   - 'back'
+  - 'video'
 allowBuilds:
   '@prisma/client': true
   '@prisma/engines': true
   esbuild: true
   prisma: true
+minimumReleaseAgeExclude:
+  - concurrently@10.0.6

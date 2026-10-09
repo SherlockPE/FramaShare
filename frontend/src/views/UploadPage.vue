@@ -22,8 +22,13 @@ import {
   files,
   registerFiles,
   releaseFiles,
+  deleteDocument,
 } from "../services/store";
 import type { Format } from "../services/store";
+import { licenses } from '../services/licenses';
+import type { License } from '../services/licenses';
+const license = ref<License>('unspecified');
+const attribution = ref(currentUser()?.name || '');
 const route = useRoute(),
   router = useRouter();
 const fullUrl = (path: string) => new URL(path, location.origin).href;
@@ -117,6 +122,10 @@ async function begin() {
     error.value = "Choose a file to upload.";
     return;
   }
+  if (licenses[license.value].url && !attribution.value.trim()) {
+    error.value = 'Add the author credit for this license.';
+    return;
+  }
   cancelled.value = false;
   running.value = true;
   phase.value = "uploading";
@@ -138,16 +147,17 @@ async function begin() {
       selected: selected.value,
       retention: retention.value,
       sample: sample.value,
+      license: license.value,
+      attribution: attribution.value,
     });
     if (cancelled.value) {
-      state.documents = state.documents.filter((d) => d.id !== publication.id);
-      releaseFiles(publication.id);
+      await deleteDocument(publication.id);
       return;
     }
     router.replace("/upload/complete/" + publication.id);
   } catch (e) {
-    error.value = (e as Error).message;
-    phase.value = "failed";
+    if (!cancelled.value) { error.value = (e as Error).message; phase.value = "failed"; }
+    else notify((e as Error).message);
   } finally {
     running.value = false;
   }
@@ -378,7 +388,22 @@ onBeforeUnmount(() => {
             placeholder="A little context for your readers"
             maxlength="2000"
           /></label
-        ><label v-if="!user" class="field"
+        >
+        <label class="field">
+          Usage rights
+          <select v-model="license" aria-describedby="license-description">
+            <option v-for="(option, id) in licenses" :key="id" :value="id">{{ option.label }}</option>
+          </select>
+        </label>
+        <p id="license-description" class="small muted">
+          {{ licenses[license].description }}
+          <a v-if="licenses[license].url" :href="licenses[license].url" target="_blank" rel="noopener noreferrer">Full license terms</a>
+        </p>
+        <label v-if="licenses[license].url" class="field">
+          Author credit
+          <input v-model="attribution" required maxlength="200" placeholder="Name to credit when reusing this publication" />
+        </label>
+        <label v-if="!user" class="field"
           >Keep this publication for<select v-model="retention">
             <option v-for="n in state.settings.retention" :key="n" :value="n">
               {{ n }} {{ n === 1 ? "day" : "days" }}

@@ -1,0 +1,8 @@
+.git
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+.runtime
+frontend/docs
+back/prisma/generated

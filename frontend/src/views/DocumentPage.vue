@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PublicationLicense from "../components/PublicationLicense.vue";
 import { ref, computed, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { BookOpen, Plus, Copy, ArrowLeft, Link, Download } from "@lucide/vue";
@@ -13,6 +14,7 @@ import {
   getManaged,
   claimDocument,
   deleteDocument,
+  updateDocument,
   formatSize,
   formatDate,
   notify,
@@ -64,12 +66,8 @@ async function save() {
   if (!doc.value) return;
   saving.value = true;
   try {
-    await delay();
     if (!title.value.trim()) throw Error("Add a title.");
-    doc.value.title = title.value.trim();
-    doc.value.description = description.value;
-    doc.value.images = images.value.map((i) => ({ ...i }));
-    doc.value.updatedAt = state.now;
+    await updateDocument(doc.value.id, title.value.trim(), description.value);
     notify("Publication updated");
     router.push(base.value);
   } catch (e) {
@@ -100,12 +98,13 @@ async function claim() {
   }
   claimConfirm.value = false;
 }
-function remove() {
-  if (doc.value) {
-    deleteDocument(doc.value.id);
+async function remove() {
+  if (!doc.value) return;
+  try {
+    await deleteDocument(doc.value.id);
     notify("Publication deleted");
     router.push(managed.value ? "/" : "/app/library");
-  }
+  } catch (e) { error.value = (e as Error).message; deleting.value = false; }
 }
 function saved(link: SharingLink) {
   create.value = false;
@@ -161,7 +160,7 @@ function downloadManagement() {
       <RouterLink to="/upload" class="button">Upload a document</RouterLink>
     </div>
     <template v-else
-      ><RouterLink :to="managed ? '/' : '/app/library'" class="row small back"
+      ><p v-if="error && !editing && !deleting" class="alert error" role="alert">{{ error }}</p><RouterLink :to="managed ? '/' : '/app/library'" class="row small back"
         ><ArrowLeft :size="16" />{{ managed ? "Home" : "Your library" }}</RouterLink
       >
       <div class="page-heading row between">
@@ -294,6 +293,7 @@ function downloadManagement() {
             }}</span>
             <h2>A little space to read</h2>
             <p class="muted">{{ doc.description || "No description added yet." }}</p>
+            <PublicationLicense :publication="doc" />
             <RouterLink v-if="doc.status === 'ready'" :to="base + '/read'" class="button"
               ><BookOpen :size="18" />Open reader</RouterLink
             >
@@ -316,7 +316,7 @@ function downloadManagement() {
               </button>
             </div>
             <div
-              v-if="!doc.seed && !files.has(doc.id)"
+              v-if="!doc.seed && !doc.source && !files.has(doc.id)"
               class="alert"
               style="margin-top: 16px"
             >

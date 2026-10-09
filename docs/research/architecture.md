@@ -12,7 +12,7 @@ Vue is a choice for a small team building a reader interface; not a licensing re
 
 The Framasoft charter speaks of free software, open standards, and sharing sources. It does not mandate MIT. Apache, BSD, MPL, GPL, and AGPL can also meet the goal of free software; they differ in obligations and compatibility in a specific combination. [Framasoft Charter](https://framasoft.org/en/charte/).
 
-**For Framashare's own code, I recommend AGPL-3.0-or-later, subject to agreement with Framasoft.** It prevents a scenario where someone runs a modified service and does not give its users access to the corresponding sources. MIT is a good choice if the goal is maximally free reuse, including in closed products; it does not provide such a commitment for modified services. The precise AGPL obligation applies, among other things, to making the source code of the modified version available to users interacting with it over a network. [GNU explanation](https://www.gnu.org/licenses/why-affero-gpl.html).
+**Framashare's own code is licensed under AGPL-3.0-or-later**; see [LICENSE](../../LICENSE). It prevents a scenario where someone runs a modified service and does not give its users access to the corresponding sources. MIT is a good choice if the goal is maximally free reuse, including in closed products; it does not provide such a commitment for modified services. The precise AGPL obligation applies, among other things, to making the source code of the modified version available to users interacting with it over a network. [GNU explanation](https://www.gnu.org/licenses/why-affero-gpl.html).
 
 | Element | License verified with author | Role / decision |
 |---|---|---|
@@ -107,4 +107,4 @@ Most important tests: no access to assets without a session; identifier guessing
 2. Do authors require an account? An account allows recovering files and managing retention; anonymous upload needs a secure management link and more protection against abuse.
 3. Must EPUB be in the first version? If so, isolation and a custom reader are an MVP element, not an optional post-launch addition.
 4. Does the limit mean global sessions or access for specific people? The second option requires identification.
-5. Does Framasoft approve AGPL and such an operational stack? Confirm before finalizing the repository license and production deployment.
+5. Does Framasoft approve the operational stack? Confirm before production deployment.

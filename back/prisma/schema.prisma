@@ -15,6 +15,10 @@ model User {
   passwordHash String
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+  name         String    @default("")
+  role         String    @default("author")
+  quota        Int       @default(1000000000)
+  authSessions AuthSession[]
   documents    Document[]
 }
 
@@ -22,6 +26,8 @@ model User {
 model Document {
   id               String    @id @default(uuid())
   title            String
+  license          String    @default("unspecified")
+  attribution      String    @default("")
   description      String?
   filename         String
   originalFilename String
@@ -59,4 +65,12 @@ model Session {
   link      Link     @relation(fields: [linkId], references: [id])
   ipAddress String?  // optional for abuse tracking
   startedAt DateTime @default(now())
+}
+
+model AuthSession {
+  tokenHash String   @id
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  @@index([userId])
 }

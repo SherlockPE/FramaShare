@@ -1,20 +1,14 @@
 {
   "name": "framashare-workspace",
+  "license": "AGPL-3.0-or-later",
   "private": true,
+  "packageManager": "pnpm@11.7.0",
   "scripts": {
     "dev": "concurrently \"pnpm --filter frontend run dev\" \"pnpm --filter back run dev\"",
     "build": "pnpm --filter frontend run build && pnpm --filter back run build",
     "clean": "rm -rf node_modules pnpm-lock.yaml frontend/node_modules back/node_modules"
   },
   "devDependencies": {
-    "concurrently": "^10.0.5"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "prisma",
-      "@prisma/engines",
-      "@prisma/client",
-      "esbuild"
-    ]
+    "concurrently": "^10.0.6"
   }
 }

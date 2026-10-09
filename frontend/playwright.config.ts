@@ -1,1 +1,10 @@
-import {defineConfig} from '@playwright/test';export default defineConfig({testDir:'tests',testMatch:'flows.e2e.ts',workers:1,fullyParallel:false,timeout:40000,use:{baseURL:'http://127.0.0.1:5173',headless:true,viewport:{width:1440,height:1000}},reporter:'list',outputDir:'docs/verification/test-results'});
+import { defineConfig } from '@playwright/test';
+export default defineConfig({
+  testDir: 'tests', testMatch: 'owner-pdf.e2e.ts', workers: 1, fullyParallel: false, timeout: 45000,
+  use: { baseURL: process.env.TEST_APP_URL || 'http://localhost:5173', headless: true },
+  projects: [
+    { name: 'desktop', use: { viewport: { width: 1280, height: 900 } } },
+    { name: 'narrow', use: { viewport: { width: 320, height: 740 } } },
+  ],
+  reporter: 'list', outputDir: '../docs/verification/test-results',
+});

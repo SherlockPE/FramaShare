@@ -26,9 +26,9 @@ async function load() {
     loading.value = true;
     error.value = '';
     try {
-        const loaded = await getDocument(props.source).promise;
+        const loaded = await getDocument({ url: props.source }).promise;
         if (id !== loadId) {
-            loaded.destroy();
+            loaded.loadingTask.destroy();
             return
         } pdf.value = loaded;
         page.value = Math.min(Math.max(1, page.value), loaded.numPages);
@@ -73,7 +73,7 @@ async function render() {
 function go(value: number) { page.value = Math.max(1, Math.min(count.value || 1, Number(value) || 1)); pageEntry.value = page.value; stage.value?.scrollTo({ top: 0, left: 0 }); if (window.innerWidth < 800) panel.value = '' } function zoom(delta: number) { fit.value = 'custom'; scale.value = Math.min(3, Math.max(.25, scale.value + delta)) } function chooseZoom(e: Event) { const value = (e.target as HTMLSelectElement).value; if (['width', 'page'].includes(value)) fit.value = value; else { fit.value = 'custom'; scale.value = Number(value) } }
 async function search() { results.value = []; if (!query.value.trim() || !pdf.value) return; searching.value = true; try { for (let n = 1; n <= pdf.value.numPages; n++) { const text = await (await pdf.value.getPage(n)).getTextContent(); const content = text.items.map(item => 'str' in item ? item.str : '').join(' '), at = content.toLowerCase().indexOf(query.value.toLowerCase()); if (at >= 0) results.value.push({ page: n, snippet: content.slice(Math.max(0, at - 35), at + 100) }) } await render() } finally { searching.value = false } }
 function keyboard(e: KeyboardEvent) { if ((e.target as HTMLElement)?.closest('input,textarea,select,button')) return; if (e.key === 'ArrowRight') { e.preventDefault(); go(page.value + 1) } if (e.key === 'ArrowLeft') { e.preventDefault(); go(page.value - 1) } if (e.key === 'Escape') panel.value = '' }
-watch(() => props.source, load, { immediate: true }); watch([page, scale, fit, rotation], () => { nextTick(render) }); watch(panel, () => nextTick(render)); onMounted(() => { document.addEventListener('keydown', keyboard); resize = new ResizeObserver(() => { if (fit.value !== 'custom') render() }); if (stage.value) resize.observe(stage.value) }); onBeforeUnmount(() => { loadId++; task?.cancel(); textLayer?.cancel(); pdf.value?.destroy(); resize?.disconnect(); document.removeEventListener('keydown', keyboard) });
+watch(() => props.source, load, { immediate: true }); watch([page, scale, fit, rotation], () => { nextTick(render) }); watch(panel, () => nextTick(render)); onMounted(() => { document.addEventListener('keydown', keyboard); resize = new ResizeObserver(() => { if (fit.value !== 'custom') render() }); if (stage.value) resize.observe(stage.value) }); onBeforeUnmount(() => { loadId++; task?.cancel(); textLayer?.cancel(); pdf.value?.loadingTask.destroy(); resize?.disconnect(); document.removeEventListener('keydown', keyboard) });
 </script>
 <template>
     <div class="pdf-reader">
