@@ -18,6 +18,8 @@ model User {
   name         String    @default("")
   role         String    @default("author")
   quota        Int       @default(1000000000)
+  deleting     Boolean @default(false)
+  resetTokens PasswordResetToken[]
   authSessions AuthSession[]
   documents    Document[]
 }
@@ -25,6 +27,10 @@ model User {
 // Model for uploaded documents
 model Document {
   id               String    @id @default(uuid())
+  moderated        Boolean @default(false)
+  format           String @default("pdf")
+  assets           Json @default("[]")
+  chapters         Json @default("[]")
   title            String
   license          String    @default("unspecified")
   attribution      String    @default("")
@@ -38,6 +44,9 @@ model Document {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   status           String    @default("processing") // processing, ready, error
+  manageHash       String? @unique
+  deleteAt         DateTime?
+  reports          Report[]
   retentionDays    Int?      // for anonymous uploads, e.g., 1, 7, 30
   links            Link[]
 }
@@ -63,6 +72,8 @@ model Session {
   id        String   @id @default(uuid())
   linkId    String
   link      Link     @relation(fields: [linkId], references: [id])
+  tokenHash String? @unique
+  expiresAt DateTime?
   ipAddress String?  // optional for abuse tracking
   startedAt DateTime @default(now())
 }
@@ -73,4 +84,28 @@ model AuthSession {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
   @@index([userId])
+}
+
+model PasswordResetToken {
+  tokenHash String @id
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  @@index([userId])
+}
+
+model Report {
+  id String @id @default(uuid())
+  documentId String
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  reason String
+  description String
+  createdAt DateTime @default(now())
+  status String @default("open")
+  decision String?
+}
+
+model InstanceSettings {
+  id Int @id @default(1)
+  value Json
 }

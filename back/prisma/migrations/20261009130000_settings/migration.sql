@@ -1,0 +1,2 @@
+ALTER TABLE "Document" ADD COLUMN "moderated" BOOLEAN NOT NULL DEFAULT false;
+CREATE TABLE "InstanceSettings" ("id" INTEGER PRIMARY KEY DEFAULT 1, "value" JSONB NOT NULL);

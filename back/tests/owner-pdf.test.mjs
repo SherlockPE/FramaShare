@@ -45,7 +45,7 @@ test('persistent accounts and private PDFs with independent clients', { skip: !p
   }
   try {
     const email = `owner-${crypto.randomUUID()}@example.com`;
-    const register = await send('POST', '/api/auth/register', { name: 'Owner', email, password: 'correct-password', role: 'admin' });
+    const register = await send('POST', '/api/auth/register', { name: 'Owner', email, password: 'correct-password' });
     assert.equal(register.statusCode, 201, register.body);
     const owner = register.json().user;
     accountIds.push(owner.id);
@@ -55,7 +55,7 @@ test('persistent accounts and private PDFs with independent clients', { skip: !p
     const firstCookie = cookieOf(register);
     assert.equal((await send('POST', '/api/auth/login', { email, password: 'wrong-password' })).statusCode, 401);
     assert.equal((await send('POST', '/api/auth/logout', undefined, firstCookie, 'https://attacker.invalid')).statusCode, 403);
-    assert.equal((await upload('')).statusCode, 401);
+    assert.equal((await send('POST', '/api/auth/register', { email: 'fake@example.com', name: 'Fake', password: 'correct-password', role: 'admin' })).statusCode, 400);
     assert.equal((await upload(firstCookie, Buffer.from('fake PDF'))).statusCode, 400);
     assert.equal((await upload(firstCookie, Buffer.alloc(1001))).statusCode, 413);
     assert.deepEqual(await readdir(process.env.STORAGE_PATH), []);
