@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { BookOpen, Menu, X, Upload, Library, Shield, UserRound } from "@lucide/vue";
+import { Menu, X, Upload, Library, Shield, UserRound } from "@lucide/vue";
 import UiMenu from "./components/UiMenu.vue";
 import { currentUser, state, ui, notify, signOut, initializeSession } from "./services/store";
 const route = useRoute(),
@@ -31,7 +31,7 @@ async function retrySession() {
   <template v-if="!isReader"
     ><header class="site-header">
       <RouterLink to="/" class="brand"
-        ><BookOpen :size="23" stroke-width="1.5" />Framashare</RouterLink
+        ><img src="/icons/newLogo.svg" alt="" width="48" height="48" />Framashare</RouterLink
       >
       <nav class="desktop-nav" aria-label="Main navigation">
         <template v-if="route.path.startsWith('/app') || route.path.startsWith('/admin')"
@@ -56,7 +56,7 @@ async function retrySession() {
           ><RouterLink to="/help">Help</RouterLink
           ><button @click="logout">Sign out</button></UiMenu
         ><RouterLink v-else to="/sign-in" class="sign-in">Sign in</RouterLink
-        ><RouterLink to="/upload" class="button"
+        ><RouterLink to="/upload" class="button" aria-label="Upload"
           ><Upload :size="16" /><span>Upload</span></RouterLink
         ><button
           class="icon-button mobile-toggle"
@@ -83,7 +83,7 @@ async function retrySession() {
     <RouterView v-else :key="route.path.startsWith('/upload') ? 'upload' : route.path" />
   </main>
   <footer v-if="!isReader" class="site-footer">
-    <RouterLink to="/" class="brand"><BookOpen :size="20" />Framashare</RouterLink>
+    <RouterLink to="/" class="brand"><img src="/icons/newLogo.svg" alt="" width="48" height="48" />Framashare</RouterLink>
     <p class="muted small">A little space for shared reading.</p>
     <div class="row wrap">
       <RouterLink to="/privacy">Privacy</RouterLink
@@ -187,6 +187,10 @@ async function retrySession() {
   .brand {
     font-size: 22px;
   }
+  .brand img { width: 32px; height: 32px; flex-shrink: 0; }
+  .site-header .brand { flex-shrink: 0; white-space: nowrap; }
+  .header-actions > .button { min-width: 44px; padding: 10px; }
+  .header-actions > .button span { display: none; }
   .desktop-nav,
   .sign-in {
     display: none;
@@ -229,14 +233,9 @@ async function retrySession() {
     font-size: 19px;
     gap: 6px;
   }
-  .brand svg {
-    width: 18px;
-  }
+  .brand img { width: 28px; height: 28px; }
   .header-actions .button {
     padding: 10px;
-  }
-  .header-actions .button svg {
-    display: none;
   }
   .header-actions :deep(.dropdown > .button) {
     padding: 10px 8px;

@@ -179,7 +179,7 @@ const faqs = [
       <img
         class="hero-art"
         src="/samples/reading-garden.svg"
-        alt="A pixel-art garden with books, trees and a quiet place to read"
+        alt="A monochrome illustration of a group of characters"
       />
       <div class="hero-copy">
         <h1>Good things<br />are meant to be read.</h1>
@@ -196,11 +196,11 @@ const faqs = [
         </div>
         <p class="hero-note">No account needed to upload or read.</p>
       </div>
-      <RouterLink class="garden-callout" to="/share/garden"
+      <RouterLink class="garden-callout" to="/upload?sample=pdf"
         ><span class="callout-icon"><BookOpen :size="20" /></span
         ><span
-          >A guide to shared gardens<small
-            >Find a quiet moment. Open the example.</small
+          >Try sharing a document<small
+            >Start with our sample PDF.</small
           ></span
         ><ChevronRight :size="18"
       /></RouterLink>
@@ -223,8 +223,8 @@ const faqs = [
         <div class="preview-top">
           <span class="row"><BookOpen :size="17" />Community workshop handbook</span
           ><span class="preview-page">1 / 6</span
-          ><RouterLink to="/share/workshop" class="button secondary"
-            >Try the reader<ArrowRight :size="16"
+          ><RouterLink to="/upload?sample=pdf" class="button secondary"
+            >Share sample PDF<ArrowRight :size="16"
           /></RouterLink>
         </div>
         <div class="preview-body">
@@ -248,13 +248,13 @@ const faqs = [
               <div></div>
             </div>
           </aside>
-          <RouterLink to="/share/workshop" class="paper-preview"
+          <RouterLink to="/upload?sample=pdf" class="paper-preview"
             ><span class="paper-kicker">The neighbourhood library</span>
             <h3>Community<br />workshop handbook</h3>
             <div class="paper-rule"></div>
             <p>A practical collection of ideas<br />for bringing people together.</p>
             <div class="paper-garden">
-              <img src="/samples/garden-1.svg" alt="Illustration of a shared garden" />
+              <img src="/samples/garden-1.jpg" alt="A colourful group of illustrated characters" />
             </div>
             <small>Open notes. Shared possibilities.</small></RouterLink
           >
@@ -627,14 +627,13 @@ const faqs = [
   width: 100%;
   height: 100%;
   object-fit: cover;
-  image-rendering: pixelated;
   object-position: center 62%;
 }
 .hero::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, #143b5055, transparent 65%);
+  background: linear-gradient(90deg, #143b50f2, #143b50d9 42%, transparent 85%);
   pointer-events: none;
 }
 .hero-copy {
@@ -1099,7 +1098,6 @@ summary {
   border: 8px solid #fbfbf8;
   border-radius: 16px;
   box-shadow: 0 0 0 1px var(--border);
-  image-rendering: pixelated;
 }
 .article-end {
   display: flex;
@@ -1155,6 +1153,7 @@ summary {
   }
 }
 @media (max-width: 700px) {
+  .hero::after { background: linear-gradient(180deg, #143b50e6, #143b50cc 60%, #143b5044); }
   .hero {
     min-height: 660px;
   }

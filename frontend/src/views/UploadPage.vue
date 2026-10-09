@@ -171,6 +171,7 @@ function saveManagement() {
   notify("Management link saved");
 }
 onMounted(() => {
+  if (route.query.sample === "pdf") demo();
   if (import.meta.env.MODE === 'test' && route.query.demo === "selected") demo();
   if (import.meta.env.MODE === 'test' && route.query.demo === "failure") {
     demo();

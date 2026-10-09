@@ -11,7 +11,7 @@ Gałąź `codex/usable-mvp`. Kryteria [planu](../design/usable-mvp-plan.md) spra
 | Publikacje i dostęp | PDF Range/416, EPUB TOC/obrazy/sanitizacja, hostile ZIP/DRM/fixed-layout/traversal/bomb, dekodowane albumy; obcy właściciel/anonim/fałszywy token, wygaśnięcie, revocation, moderacyjne usunięcie i download=false. |
 | Równoległość i awarie | Quota uploadów/claim oraz limit sesji pod blokadami bazodanowymi; błędy zapisu/DB/usuwania, rollback, ponawiane kasowanie, fizyczna retencja i osierocony plik. |
 | Frontend unit | 20/20. Historyczne testy demo są izolowane; testy integracji store sprawdzają prawdziwe API, retry, brak lokalnej tożsamości i hasło dosłownie `protected`. |
-| Playwright | 21/21, jeden worker, desktop 1280 px / mobile 390 px / narrow 320 px. Dwa niezależne konteksty, upload każdego formatu, formularz linku, podgląd bez zużycia sesji, odbiorca, refresh, revocation, zarządzanie anonimem/claim, cancel z DELETE, panel administratora i odmowa sfałszowanej roli. |
+| Playwright | 24/24, jeden worker, desktop 1280 px / mobile 390 px / narrow 320 px. Dwa niezależne konteksty, upload każdego formatu, formularz linku, podgląd bez zużycia sesji, odbiorca, refresh, revocation, zarządzanie anonimem/claim, cancel z DELETE, panel administratora i odmowa sfałszowanej roli. |
 | Restart | Rzeczywiste zatrzymanie/ponowne uruchomienie własnego procesu API dla każdego formatu i istniejących cookies odbiorcy; osobny schemat testowy. |
 | Klawiatura i layout | Nawigacja EPUB strzałką, brak poziomego overflow biblioteki w trzech rozmiarach. Nie jest to pełny audyt dostępności. |
 | Konfiguracja produkcyjna | Odmowa nieprywatnego storage i wymagane środowisko; cookies Secure/HttpOnly/SameSite sprawdzone przy NODE_ENV=production. Vite odmawia prywatnego pliku backendu przez /@fs. |
@@ -23,3 +23,12 @@ Testy używały wyłącznie dedykowanych baz `_test`, osobnych katalogów storag
 ## Przed publicznym wydaniem
 
 Administratorzy muszą skonfigurować rzeczywiste SMTP i sprawdzić dostarczenie wiadomości, domenę/TLS/proxy, nadzór procesu, konto administratora oraz politykę kopii poza hostem. Właściciel musi zatwierdzić privacy/terms. Procedury znajdują się w [instrukcji operacyjnej](../operations.md). Lokalny odbiór techniczny nie stanowi wdrożenia ani zatwierdzenia tych treści.
+
+
+## Review i merge designu z gałęzi storage
+
+Ponowny fetch: storage/develop `17e5f27`, auth `aa8bafe` zawarty w ich historii. Integracja jest zwykłym merge z rozstrzygniętymi konfliktami; nie użyto force-push ani resetu. Przejęto logo/favicon, ilustracje i okładki PDF, zachowując backend, migracje i zależności zweryfikowanego MVP. PDF.js pozostaje czytnikiem z wyszukiwaniem i warstwą tekstową, EPUB korzysta z sanitizowanej treści API. Nieaktywny React oraz materiały prezentacyjne pozostały na swoich gałęziach.
+
+Okładki mają odczyt dopiero po wejściu w viewport, wspólny worker, raster do 400×600 i fallback tytułu po odmowie lub błędzie pliku. Test sprawdza faktyczny czerwony piksel okładki, odczyt i wyszukiwanie PDF, HTTP 401, poprawnie załadowane logo i upload przykładu ze strony głównej w trzech rozmiarach. Review naprawił martwe linki dawnych przykładów, błędny favicon oraz kontrast tekstu na nowej ilustracji hero. Zrzuty landing/library obejrzano lokalnie; nie są dodane do commitów.
+
+Końcowy build po integracji: PASS. API 9/9, unit 20/20, audit 0; Playwright: 24/24 bez skipów. Po poprawce nagłówka mobilnego dodatkowy przebieg designu: 3/3; marka i akcje nie nachodzą na siebie, brak błędów JavaScript. Odbiór integracji zakończony; wynik przeznaczony na main.

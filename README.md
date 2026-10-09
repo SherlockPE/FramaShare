@@ -121,7 +121,7 @@ pnpm --filter frontend exec playwright install chromium --only-shell
 TEST_DATABASE_URL=postgresql://.../framashare_mvp_test pnpm --filter frontend test:browser
 ```
 
-`flows.e2e.ts`, `admin.e2e.ts`, `owner-pdf.e2e.ts` and `restart.e2e.ts` exercise the real API on desktop, mobile and at 320 px. The original access unit tests remain isolated demo-rule tests; they do not establish server security.
+`flows.e2e.ts`, `admin.e2e.ts`, `owner-pdf.e2e.ts`, `restart.e2e.ts` and `design.e2e.ts` exercise the real API on desktop, mobile and at 320 px. The original access unit tests remain isolated demo-rule tests; they do not establish server security.
 
 ## Private storage and operations
 

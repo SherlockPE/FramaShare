@@ -66,3 +66,14 @@ Następny etap: domknięcie kont (SMTP reset i usunięcie konta), następnie EPU
 ### Przed publicznym wydaniem
 
 Dane SMTP produkcji i weryfikacja dostarczenia do prawdziwej skrzynki, domena/TLS i nadzór procesu od administratorów, właściciel/administrator instancji, zatwierdzenie privacy/terms oraz polityka backupów. Nie wdrożono produkcji i nie utworzono Salt. Testowa baza działa na lokalnym PostgreSQL 17; aplikacja uruchomiona jako procesy Node bez kontenerów. Nie ma deklaracji gotowości produkcyjnej.
+
+
+## Integracja gałęzi i review — 9 października 2026
+
+Na żądanie właściciela wykonano merge `origin/feature/storage_and_archive_gestion` po ponownym fetch do `17e5f27`. Gałąź auth (`aa8bafe`) jest jej przodkiem; `origin/develop` wskazuje ten sam commit storage. Dawny frontend React i gałąź presentation nie zawierają zmian użytecznych dla obecnego MVP.
+
+Przejęto logo w nagłówku/stopce/logowaniu/odmowie dostępu, favicon, ilustracje i rzeczywiste okładki PDF. Okładki korzystają z istniejącego PDF.js: widoczność uruchamia odczyt, worker jest współdzielony, raster ograniczony do 400×600, błędy pozostawiają tytuł. Zachowano wyszukiwanie i warstwę tekstową czytnika. Nie przeniesiono MuPDF/epubjs ani ich zależności: zastępowały działające funkcje i omijały sanitizowany odczyt EPUB. Backend, migracje, konfiguracja bezpieczeństwa i lockfile MVP pozostały bez zmian. Nie przeniesiono wygenerowanych plików Prisma, starego middleware JWT ani nieaktualnych list TODO.
+
+Review wykryło martwe publiczne linki `/share/workshop` i `/share/garden`; zastąpiono je wyborem prawdziwego przykładowego PDF-u do uploadu, bez polegania na demo w bazie. Poprawiono favicon wskazujący nieistniejącą ścieżkę, podpisy ilustracji, kontrast hero i kolizję marki z akcjami w nagłówku mobilnym. Wszystkie wcześniejsze materiały pozostały zachowane.
+
+Build/API 9/9/unit 20/20/audit 0 przeszły po integracji. Test designu 3/3 sprawdza piksel okładki, wyszukiwanie, odmowę odczytu, logo i działający upload przykładu. Końcowy Playwright: 24/24 bez skipów; dodatkowy przebieg designu po poprawce nagłówka mobilnego: 3/3. Odbiór integracji zakończony; wynik przeznaczony na main.

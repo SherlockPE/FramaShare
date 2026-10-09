@@ -12,7 +12,8 @@ test('admin UI and API deny an ordinary account and ignore forged local role', a
 });
 
 test('administrator dismisses a durable report through the real API', async ({ browser, baseURL }) => {
-  const context = await browser.newContext({ extraHTTPHeaders: { 'X-Forwarded-For': '192.0.2.30' } }); const page = await context.newPage();
+  const address = `2001:db8::${crypto.randomUUID().slice(0, 4)}:${crypto.randomUUID().slice(0, 4)}`;
+  const context = await browser.newContext({ extraHTTPHeaders: { 'X-Forwarded-For': address } }); const page = await context.newPage();
   const origin = new URL(baseURL!).origin;
   const { PrismaClient } = await import('../../back/prisma/generated/client/index.js');
   const db = new PrismaClient({ datasources: { db: { url: process.env.TEST_DATABASE_URL! } } });

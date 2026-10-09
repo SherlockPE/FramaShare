@@ -203,7 +203,7 @@ onBeforeUnmount(() => {
     <template v-if="denial"
       ><div class="access-denied">
         <RouterLink to="/" class="reader-brand"
-          ><BookOpen :size="24" />Framashare</RouterLink
+          ><img src="/icons/newLogo.svg" alt="" width="48" height="48" />Framashare</RouterLink
         >
         <div class="card">
           <Link2Off :size="40" stroke-width="1.3" />

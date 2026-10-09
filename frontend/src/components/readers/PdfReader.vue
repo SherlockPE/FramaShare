@@ -1,11 +1,10 @@
 <script setup lang="ts">
 
 import { ref, shallowRef, onBeforeUnmount, watch, nextTick, computed, onMounted } from 'vue';
-import { getDocument, GlobalWorkerOptions, TextLayer, type PDFDocumentProxy, type RenderTask } from 'pdfjs-dist';
-import worker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import { getDocument, TextLayer, type PDFDocumentProxy, type RenderTask } from 'pdfjs-dist';
+import { pdfWorker } from '../../services/pdf';
 import { ChevronLeft, ChevronRight, PanelLeft, Search, RotateCw, ZoomIn, ZoomOut, X } from '@lucide/vue';
 
-GlobalWorkerOptions.workerSrc = worker;
 const props = defineProps<{ source: string; initialPage: number }>();
 const emit = defineEmits<{
     position: [value: number];
@@ -26,7 +25,7 @@ async function load() {
     loading.value = true;
     error.value = '';
     try {
-        const loaded = await getDocument({ url: props.source }).promise;
+        const loaded = await getDocument({ url: props.source, worker: pdfWorker() }).promise;
         if (id !== loadId) {
             loaded.loadingTask.destroy();
             return

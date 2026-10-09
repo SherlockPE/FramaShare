@@ -1,0 +1,55 @@
+import { test, expect } from '@playwright/test';
+import { PDFDocument, rgb } from 'pdf-lib';
+
+test('storage branch branding and real PDF covers preserve reader search and error fallback', async ({ page, baseURL }, info) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  const request = page.context().request;
+  const origin = new URL(baseURL!).origin;
+  const registered = await request.post('/api/auth/register', { headers: { origin }, data: { name: 'Design author', email: `design-${crypto.randomUUID()}@example.com`, password: 'correct-password' } });
+  expect(registered.status()).toBe(201);
+  try {
+    const pdf = await PDFDocument.create();
+    const first = pdf.addPage([400, 600]);
+    first.drawRectangle({ x: 0, y: 0, width: 400, height: 600, color: rgb(1, 0, 0) });
+    first.drawText('Searchable cover', { x: 30, y: 500 });
+    const uploaded = await request.post('/api/files/upload', { headers: { origin }, multipart: { title: 'Real cover', file: { name: 'cover.pdf', mimeType: 'application/pdf', buffer: Buffer.from(await pdf.save()) } } });
+    expect(uploaded.status(), await uploaded.text()).toBe(201);
+    const document = await uploaded.json();
+    await page.goto('/app/library');
+    const logo = page.locator('.site-header .brand img');
+    await expect(logo).toBeVisible();
+    await expect.poll(() => logo.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBeGreaterThan(0);
+    expect(await page.evaluate(() => document.querySelector('.site-header .brand')!.getBoundingClientRect().right <= document.querySelector('.header-actions')!.getBoundingClientRect().left)).toBe(true);
+    expect((await request.get('/icons/newLogo.svg')).status()).toBe(200);
+    expect((await request.get('/samples/garden-1.jpg')).status()).toBe(200);
+    const cover = page.locator('.pdf-cover canvas').first();
+    await expect(cover).toHaveCSS('opacity', '1');
+    expect(await cover.evaluate((element: HTMLCanvasElement) => Array.from(element.getContext('2d')!.getImageData(10, 10, 1, 1).data))).toEqual([255, 0, 0, 255]);
+    await page.screenshot({ path: info.outputPath('library-design.png'), fullPage: true });
+    await page.goto(`/app/documents/${document.id}/read`);
+    await expect(page.locator('.pdf-reader canvas').first()).toBeVisible();
+    await page.getByRole('button', { name: 'Search PDF', exact: true }).click();
+    await page.getByRole('searchbox').fill('Searchable');
+    await page.getByRole('searchbox').press('Enter');
+    await expect(page.locator('.search-result')).toContainText('Searchable cover');
+    await page.route(`**/api/files/${document.id}`, route => route.fulfill({ status: 401, body: 'Denied' }));
+    const denied = page.waitForResponse(response => response.url().endsWith(`/api/files/${document.id}`) && response.status() === 401);
+    await page.goto('/app/library');
+    await denied;
+    await expect(page.locator('.pdf-cover .cover-title')).toHaveText('Real cover');
+    await expect(page.locator('.pdf-cover canvas')).toHaveCSS('opacity', '0');
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: 'Good things are meant to be read.' })).toBeVisible();
+    await expect.poll(() => page.locator('.hero-art').evaluate((element: HTMLImageElement) => element.naturalWidth)).toBeGreaterThan(0);
+    await page.evaluate(() => document.fonts.ready);
+    await page.screenshot({ path: info.outputPath('landing-design.png'), fullPage: true });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+    await page.getByRole('link', { name: 'Share sample PDF', exact: false }).click();
+    await expect(page).toHaveURL(/\/upload\?sample=pdf$/);
+    await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Community workshop handbook');
+    await page.getByRole('button', { name: 'Upload document', exact: true }).click();
+    await expect(page).toHaveURL(/\/upload\/complete\//);
+    expect(errors).toEqual([]);
+  } finally { await request.delete('/api/auth/account', { headers: { origin } }); }
+});
