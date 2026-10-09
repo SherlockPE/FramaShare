@@ -118,8 +118,6 @@ async function logout() {
   gap: 10px;
 }
 .desktop-nav {
-  width: 50px;
-  height: 50px;
   display: flex;
   align-items: center;
   gap: 32px;

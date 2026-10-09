@@ -47,6 +47,9 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 
+# Create uploads directory and give node user permissions
+RUN mkdir -p /app/uploads && chown -R node:node /app
+
 # Run with non-privileged user for security
 USER node
 

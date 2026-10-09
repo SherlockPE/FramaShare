@@ -71,7 +71,7 @@ export const fileRoutes: FastifyPluginAsync = async (server: FastifyInstance) =>
       const rangeHeader = request.headers.range;
       if (rangeHeader) {
         const parts = rangeHeader.replace(/bytes=/, '').split('-');
-        const start = parseInt(parts[0], 10);
+        const start = parseInt(parts[0] as string, 10);
         const end = parts[1] ? parseInt(parts[1], 10) : totalSize - 1;
 
         if (start >= totalSize || end >= totalSize) {

@@ -254,7 +254,7 @@ const faqs = [
             <div class="paper-rule"></div>
             <p>A practical collection of ideas<br />for bringing people together.</p>
             <div class="paper-garden">
-              <img src="/samples/garden-1.svg" alt="Illustration of a shared garden" />
+              <img src="/samples/garden-1.jpg" alt="Illustration of a shared garden" />
             </div>
             <small>Open notes. Shared possibilities.</small></RouterLink
           >
