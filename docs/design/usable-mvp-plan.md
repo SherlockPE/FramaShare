@@ -4,11 +4,11 @@
 
 Autor zakłada konto, dodaje PDF, EPUB lub album, a odbiorca otwiera link na innym urządzeniu bez konta. Pliki, konta, linki i zgłoszenia przetrwają restart. Hasła, własność, limity i wygaśnięcie egzekwuje serwer. Zachować obecny interfejs, adresy stron i zakres produktu; zmieniać tylko integrację i konieczne komunikaty błędów.
 
-Docker wyłącznie lokalnie. Produkcja bez kontenerów, zarządzana przez Salt przez administratorów. Ta implementacja przygotowuje działającą aplikację i instrukcję operacyjną, ale nie wdraża jej na serwer. Bez S3, Redis, kolejki, dodatkowych workerów, płatności i nowych funkcji społecznościowych.
+Docker wyłącznie lokalnie. Produkcja bez kontenerów, nadzorowana przez administratorów; konfiguracja Salt poza zakresem. Ta implementacja przygotowuje działającą aplikację i instrukcję operacyjną, ale nie wdraża jej na serwer. Bez S3, Redis, kolejki, dodatkowych workerów, płatności i nowych funkcji społecznościowych.
 
 ## Kolejność implementacji
 
-1. **Zachować istniejące poprawki.** Sprawdzić dirty diff na `main`, utworzyć `codex/usable-mvp` i zachować poprawki builda, zależności oraz dokumentacji. Przejrzeć `origin/feature/user_auth_and_account` oraz `origin/feature/storage_and_archive_gestion`; wykorzystać działające fragmenty zamiast pisać je ponownie. Nie scalać tych gałęzi bez naprawy znalezionych usterek. Pierwszy pełny etap: konto → trwały PDF → biblioteka po ponownym logowaniu → drugi niezależny klient → odmowa nieuprawnionego odczytu.
+1. **Zachować istniejące poprawki.** Sprawdzić dirty diff na istniejącej `codex/usable-mvp` względem `main` i zachować poprawki builda, zależności oraz dokumentacji. Przejrzeć `origin/feature/user_auth_and_account` oraz `origin/feature/storage_and_archive_gestion`; wykorzystać działające fragmenty zamiast pisać je ponownie. Nie scalać tych gałęzi bez naprawy znalezionych usterek. Pierwszy pełny etap: konto → trwały PDF → biblioteka po ponownym logowaniu → drugi niezależny klient → odmowa nieuprawnionego odczytu.
 
 2. **Prawdziwe konta.** Rejestracja, logowanie, wylogowanie, odczyt aktualnego konta, edycja profilu, zmiana hasła i usunięcie konta. Cookies HttpOnly, Secure na produkcji, SameSite, sesje odwoływalne po wylogowaniu/resetowaniu hasła. Hasła przechowywane jako bezpieczne hashe; żadnych domyślnych sekretów produkcyjnych. Walidacja Fastify, ograniczenie prób logowania/resetu i ochrona operacji zapisu przed CSRF. Reset przez SMTP: losowy token, w bazie wyłącznie hash, jednorazowe zużycie transakcyjne i termin ważności. Rola administratora nadawana operacyjnie, nigdy z formularza lub localStorage. Dodać brakujące migracje; ustawienia bezpieczeństwa i baza z prawdziwymi danymi nie mogą zależeć od demonstracyjnego seeda.
 
@@ -43,3 +43,26 @@ Pierwszy etap realizowany na `codex/usable-mvp`, bez resetowania wcześniejszego
 Gotowe: rejestracja/logowanie/wylogowanie, profil, zmiana hasła unieważniająca sesje, prywatny PDF, trwałe metadane i biblioteka, odczyt Range, edycja/usuwanie, quota odporna na równoległe uploady, odrzucanie obcego Origin, limity żądań. Frontend odczytuje sesję przed routerem i nie przywraca lokalnych kont/publikacji. Operacje demo niedostępne w uruchomionej aplikacji; historyczne reguły demo pozostają w testach.
 
 Następny etap: domknięcie kont (SMTP reset i usunięcie konta), następnie EPUB/album oraz anonim, linki i ich sesje zgodnie z punktami 2–5. Pełne kryteria odbioru MVP nadal obowiązują; pierwszy etap nie oznacza gotowości do publicznego wdrożenia.
+
+## Postęp wykonania — 9 października 2026
+
+- Zabezpieczono wcześniejsze zmiany MVP w `847e657`. Zachowano `video/` i `session-logs/` poza commitami MVP. Fetch potwierdził wspólny punkt bazowy `main` i `codex/usable-mvp`: `1629e5b`. Gałęzie auth/storage przejrzano bez scalania; z SMTP wykorzystano wzorzec Nodemailer. JWT z domyślnym sekretem i nieautoryzowany odczyt storage nie zostały przeniesione.
+- Konta: reset SMTP, token hash w bazie, atomowe zużycie pod blokadą użytkownika, unieważnienie wszystkich resetów/sesji; trwałe usuwanie konta z ponawianym kasowaniem plików. Usunięto wyścig logowania ze zmianą hasła. Cookies HttpOnly/SameSite, Secure w produkcji; CSRF przez ścisłą kontrolę Origin; limity żądań i odrzucanie dodatkowych pól formularzy.
+- Publikacje: PDF, reflowable EPUB (ZIP/XML/sanitizacja, wewnętrzne obrazy rastrowe i TOC), albumy z kolejnością/caption/alt. Quota i claim korzystają z blokad bazodanowych. Rollback uploadu usuwa pliki; job usuwa pozostawione po awarii pliki po godzinie. Równoczesne przetwarzanie ograniczono do dwóch uploadów, a obrazy do 20 mln pikseli.
+- Udostępnianie: losowe niezależne tokeny zarządzania/odbiorcy, hash tokena zarządzania, hasła scrypt, transakcyjne sesje 60 min i limit wejść. Cookies odbiorcy mają hashe w bazie. Wygaszenie/revocation/deletion sprawdzane przy każdym odczycie; osobny download respektuje flagę. Anonim 1/7/30 dni, atomowy claim i fizyczne czyszczenie.
+- Moderacja: trwałe zgłoszenia/decyzje, serwerowa kontrola roli, podłączony panel, trwała quota/ustawienia i blokada odczytu przed fizycznym kasowaniem.
+- Frontend: istniejące adresy/wygląd zachowane. Konta, biblioteka, wszystkie formaty, linki, claim i moderacja używają API. Demo nie przywraca danych serwerowych; `/overview` pozostaje zablokowany. Privacy/terms oznaczono jako niezatwierdzone i poprawiono fakty o przechowywaniu danych.
+- Domknięcie integracji: hasło dosłownie `protected` nie jest już mylone ze znacznikiem metadanych; podgląd właściciela/zarządcy nie zużywa limitu odbiorców, a metadane za hasłem są ukryte przed sesją. Anulowanie uploadu czeka na DELETE; Vite blokuje odczyt backendu/storage przez `/@fs`; profile Chromium trafiają na dysk projektu.
+- Operacje: instrukcja Node/PostgreSQL bez kontenerów aplikacji, przykład proxy HTTPS, wymagane SMTP w produkcji, uprawnienia storage, okresowe czyszczenie, offline backup/restore z checksumami i odmową nadpisania istniejącej bazy.
+
+### Dowody odbioru — końcowa weryfikacja
+
+- API: 9/9 testów bez skipów na nowej `framashare_execution_test`; testy obejmują równoległy reset/quota/claim/sesje, nieuprawnione odczyty, restart wszystkich formatów, hostile ZIP/HTML, retencję, błędy zapisu/DB/usuwania i sprzątanie osieroconego pliku.
+- Frontend unit: 20/20. Playwright: 21/21 scenariuszy (desktop/mobile/320 px) przeszło; obejmuje dwa konteksty, każdy format, odświeżenie, rzeczywisty restart procesu, zarządzanie anonimem/claim, moderatora, anulowanie uploadu, klawiaturę EPUB i brak poziomego overflow.
+- Świeży install lockfile: 220 pakietów w izolowanej kopii projektu, bez istniejącego node_modules. Migracje pustej bazy przeszły; aktualizacja historycznego schematu w osobnej bazie zachowała wcześniejsze konto i PDF.
+- Backup/restore: snapshot bazy z plikami i manifestem SHA-256 odtworzony do pustej `framashare_restore_test`. Właściciel czyta odtworzony PDF; anonim i obce konto dostają odmowę. Klient pg_dump 16 odrzucił serwer 17; próba została wykonana narzędziami 17.
+- Końcowy build frontend/backend i typecheck przeszły; pełny pnpm audit: 0 znanych podatności. Playwright: 21/21 bez skipów.
+
+### Przed publicznym wydaniem
+
+Dane SMTP produkcji i weryfikacja dostarczenia do prawdziwej skrzynki, domena/TLS i nadzór procesu od administratorów, właściciel/administrator instancji, zatwierdzenie privacy/terms oraz polityka backupów. Nie wdrożono produkcji i nie utworzono Salt. Testowa baza działa na lokalnym PostgreSQL 17; aplikacja uruchomiona jako procesy Node bez kontenerów. Nie ma deklaracji gotowości produkcyjnej.

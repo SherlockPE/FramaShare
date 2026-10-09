@@ -2,15 +2,15 @@
 
 FramaShare's own code is licensed under [AGPL-3.0-or-later](LICENSE). Third-party libraries, fonts, and assets retain their own licenses; font and icon notices are in [docs/licenses](docs/licenses/).
 
-FramaShare is being connected to a Fastify/Prisma/PostgreSQL backend, retaining the Vue 3/Vite interface. The first MVP slice supports persistent accounts, profile and password changes, private PDF upload/read/edit/delete, and a library restored on a new browser after signing in. Cookies identify revocable database sessions; publication IDs and metadata come from the API. Local storage holds reading preferences only.
+FramaShare uses a Fastify/Prisma/PostgreSQL API with the existing Vue 3/Vite interface. Accounts, revocable cookie sessions, private PDF/EPUB/albums, anonymous management links, atomic claim, recipient sessions, moderation and instance settings persist on the server. Browser storage holds reading preferences only. Password reset uses SMTP; account deletion removes its files, with retryable cleanup after disk errors.
 
-Sharing, anonymous uploads/claim/retention, SMTP reset, account deletion, EPUB/albums and moderation are still pending in [the MVP plan](docs/design/usable-mvp-plan.md). These flows do not fall back to simulated success; `/overview` and the administration UI are blocked in the running application. Historical prototype tests and views remain for subsequent integration, and do not establish server security.
+The [MVP plan](docs/design/usable-mvp-plan.md) tracks acceptance evidence and release requirements. [Operations](docs/operations.md) covers HTTPS, storage permissions, retention, backup and restore. Privacy/terms remain drafts requiring the instance owner's approval. No production deployment or Salt configuration is included.
 
 ## 🚀 Prerequisites
 
 - **Node.js** v22.13+ or 24 LTS
 - **pnpm** v11.7.0 (`corepack enable && corepack prepare pnpm@11.7.0 --activate`)
-- **PostgreSQL** for migrations. **Docker Compose** is optional for a local database; production is managed by Salt without Docker.
+- **PostgreSQL** for migrations. **Docker Compose** is optional for a local database; production runs without Docker.
 
 ## If you don't have pnpm installed on your machine
 1. **Copy and paste this:**
@@ -96,7 +96,7 @@ node --env-file=.env dist/index.js
 
 The `.env` file is required for this command; create it from `.env.example` and set environment-specific values. Administrators can instead inject the variables and run `node dist/index.js`. Serve `frontend/dist` as static files with an SPA fallback to `index.html`, and proxy `/api/` to the backend. Apply migrations separately with `pnpm exec prisma migrate deploy` from `back/`; they do not run automatically on startup.
 
-Production servers and services will be managed by [Salt](https://saltproject.io/). Salt configuration, service supervision and TLS are maintained by the administrators; this repository does not provision or deploy production.
+Administrators supply production service supervision and TLS. This repository does not provision or deploy production or create Salt configuration.
 
 For the optional local backend image: `docker compose build backend`. It uses the repository root as its build context and the same pnpm lockfile.
 
@@ -113,19 +113,18 @@ The backend security/integration test requires a **dedicated migrated test datab
 TEST_DATABASE_URL=postgresql://.../framashare_mvp_test pnpm --filter back test
 ```
 
-For the current browser flow, start the backend with that dedicated database, a separate `STORAGE_PATH` and `APP_ORIGIN=http://localhost:5173`; start Vite on port 5173. It tests separate browser contexts, a real PDF reader, metadata persistence, logout and access denial on desktop and at 320 px. It creates test accounts in that database; never point it at a live environment.
+For browser flows, start the backend with `NODE_ENV=test`, that dedicated database, a separate `STORAGE_PATH` and `APP_ORIGIN=http://localhost:5173`; start Vite on port 5173. It tests separate browser contexts, all formats, metadata persistence, logout, revocation, access denial and real API restart on desktop/mobile/320 px. It creates test accounts in that database; never point it at a live environment.
 
 ```bash
+export PLAYWRIGHT_BROWSERS_PATH=/absolute/path/on/project-disk/browsers
 pnpm --filter frontend exec playwright install chromium --only-shell
-pnpm --filter frontend test:browser
+TEST_DATABASE_URL=postgresql://.../framashare_mvp_test pnpm --filter frontend test:browser
 ```
 
-`flows.e2e.ts`, `admin.e2e.ts` and the original access unit tests describe the former browser demo. They are retained as reference for later MVP slices and are not the default browser suite.
+`flows.e2e.ts`, `admin.e2e.ts`, `owner-pdf.e2e.ts` and `restart.e2e.ts` exercise the real API on desktop, mobile and at 320 px. The original access unit tests remain isolated demo-rule tests; they do not establish server security.
 
 ## Private storage and operations
 
-Set `STORAGE_PATH` to a directory owned by the API service account, outside the static frontend directory. New directories/files use modes 0700/0600. PDF uploads stream to disk, accept at most 100 MB, and check the PDF signature and end marker; a corrupt PDF can still be rejected by the reader. The reverse proxy must allow the configured upload size plus multipart overhead (the local Nginx example permits 101 MB). Keep `APP_ORIGIN` equal to the public HTTPS origin in production and set `NODE_ENV=production`; startup requires explicit database, storage and HTTPS origin settings. Sessions use random tokens stored as hashes, without JWT or cookie signing secrets. Passwords use Node scrypt with a stored work factor.
+Set `STORAGE_PATH` to an absolute private directory owned by the API account, outside the static frontend directory. Directories/files use 0700/0600. Maximum publication size is 100 MB; uploads validate PDF signatures, parse bounded/sanitized reflowable EPUB, and decode JPEG/PNG/WebP images with a 20-million-pixel ceiling. Quota and claim are protected by database locks. Private files are served only after owner/management or recipient-session authorization, including byte ranges. Disabling downloads does not prevent copying displayed content.
 
-Failed uploads remove their partial file before returning an error. A deletion marks the document as `deleting` before unlinking; it stops serving bytes immediately. If disk deletion or the final database update fails, retry the deletion. The library keeps the pending record and its quota until completion. Already opened streams may finish sending their bytes. Session expiry is checked on every request; periodic removal of expired session rows will be added with the retention job.
-
-Back up PostgreSQL **and** `STORAGE_PATH` together while writes are paused. Restore both to an isolated environment, apply migrations, and verify an owner can read the saved PDF while an unrelated account cannot. Backup/restore automation and a restore drill are pending with the operational MVP stage. Do not serve private files directly from Nginx. No Salt/systemd configuration or production deployment is included.
+Deletion blocks reads before disk operations and retries every minute on failure. Anonymous expiration is checked on every request; cleanup physically removes expired files. Crash leftovers are scavenged after one hour. Back up PostgreSQL and files together while the API is stopped, then restore into a fresh isolated environment and verify access. See [the operational guide](docs/operations.md) and `scripts/backup.mjs`.

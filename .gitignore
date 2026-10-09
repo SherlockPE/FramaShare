@@ -37,6 +37,8 @@ docs/design/verification/
 back/prisma/generated/
 back/dist/
 .env
+.env.*
+!.env.example
 # Private uploaded publications
 back/uploads/
 uploads/

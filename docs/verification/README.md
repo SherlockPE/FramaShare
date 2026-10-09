@@ -1,4 +1,8 @@
-# Framashare Prototype Verification
+# Framashare Verification
+
+Aktualny raport trwałego MVP: [odbiór 9 października 2026](mvp-acceptance-20261009.md). Poniższe wyniki opisują historyczny prototyp i nie są dowodem bezpieczeństwa API.
+
+## Historical prototype verification
 
 Executed locally on October 6, 2026. The implementation uses Vue 3, TypeScript, Vite, Vue Router, and PDF.js, without Figma and backend. Work was divided among three subagents (Public & Account, Readers, Administration); the main agent integrated the library, upload, links, and anonymous assignment.
 
