@@ -9,7 +9,7 @@ const response = (body: unknown, status = 200) => new Response(JSON.stringify(bo
 const user = { id: 'server-user', name: 'Author', email: 'author@example.com', quota: 1000000000, role: 'author' as const };
 
 it('ignores local account state and retries failed session loading', async () => {
-  const fetch = vi.fn().mockRejectedValueOnce(Error('Offline')).mockResolvedValueOnce(response({ user })).mockResolvedValueOnce(response({ documents: [] }));
+  const fetch = vi.fn().mockRejectedValueOnce(Error('Offline')).mockResolvedValueOnce(response({ user })).mockResolvedValueOnce(response({ fileMB: 100, albumMB: 100, albumCount: 50, quotaMB: 1000, retention: [1, 7, 30], defaultRetention: 7 })).mockResolvedValueOnce(response({ documents: [] })).mockResolvedValueOnce(response({ links: [] }));
   vi.stubGlobal('fetch', fetch);
   const store = await import('../src/services/store');
   expect(store.currentUser()).toBeUndefined();
@@ -21,7 +21,7 @@ it('ignores local account state and retries failed session loading', async () =>
   expect(store.ui.sessionError).toBe('');
 });
 it('sign-in sends the password and restores server IDs and metadata', async () => {
-  const fetch = vi.fn().mockResolvedValueOnce(response({ user })).mockResolvedValueOnce(response({ documents: [{ id: 'server-document', title: 'Stored title', description: 'Stored description', ownerId: user.id }] }));
+  const fetch = vi.fn().mockResolvedValueOnce(response({ user })).mockResolvedValueOnce(response({ documents: [{ id: 'server-document', title: 'Stored title', description: 'Stored description', ownerId: user.id }] })).mockResolvedValueOnce(response({ links: [] }));
   vi.stubGlobal('fetch', fetch);
   const store = await import('../src/services/store');
   await store.signIn(user.email, 'secret-password');
@@ -53,7 +53,7 @@ it('failed deletion leaves the publication available for a retry', async () => {
 
 it('uploads license and credit as multipart fields and restores them from the server', async () => {
   const fetch = vi.fn().mockResolvedValueOnce(response({ id: 'licensed-document', license: 'CC-BY-4.0', attribution: 'Author' }))
-    .mockResolvedValueOnce(response({ documents: [{ id: 'licensed-document', license: 'CC-BY-4.0', attribution: 'Author' }] }));
+    .mockResolvedValueOnce(response({ documents: [{ id: 'licensed-document', license: 'CC-BY-4.0', attribution: 'Author' }] })).mockResolvedValueOnce(response({ links: [] }));
   vi.stubGlobal('fetch', fetch);
   const store = await import('../src/services/store');
   store.state.accounts = [user]; store.state.currentUserId = user.id;
@@ -63,4 +63,12 @@ it('uploads license and credit as multipart fields and restores them from the se
   expect(form.get('attribution')).toBe('Author');
   await store.refreshLibrary();
   expect(store.getDocument('licensed-document')).toMatchObject({ license: 'CC-BY-4.0', attribution: 'Author' });
+});
+
+it('a literal protected password is sent to the server rather than treated as metadata', async () => {
+  const fetch = vi.fn().mockResolvedValueOnce(response({ id: 'link', token: 'recipient', documentId: 'doc', password: 'protected' }));
+  vi.stubGlobal('fetch', fetch);
+  const store = await import('../src/services/store');
+  await store.saveLink('doc', { name: 'Protected group', password: 'protected' });
+  expect(JSON.parse(fetch.mock.calls[0]![1].body).password).toBe('protected');
 });

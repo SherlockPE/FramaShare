@@ -16,7 +16,7 @@ async function submit() {
     if (!reason.value || !description.value.trim())
       throw Error("Choose a reason and describe the concern.");
     await delay();
-    addReport(props.documentId, reason.value, description.value);
+    await addReport(props.documentId, reason.value, description.value);
     success.value = true;
   } catch (e) {
     error.value = (e as Error).message;

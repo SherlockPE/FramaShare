@@ -65,6 +65,9 @@ test('SMTP reset is single-use and revokes sessions; deletion retries after disk
     await finishAccountDeletion(id);
     assert.equal(await prisma.user.findUnique({ where: { id } }), null);
     assert.equal(await prisma.document.count({ where: { userId: id } }), 0);
+    const attempts=[];
+    for(let i=0;i<6;i++)attempts.push(await server.inject({method:'POST',url:'/api/auth/forgot-password',payload:{email:'missing@example.com'},headers:{origin:process.env.APP_ORIGIN,'x-forwarded-for':'192.0.2.98'}}));
+    assert.equal(attempts.at(-1).statusCode,429); assert.equal(messages.length,1);
   } finally {
     storageService.deleteFile = savedDelete;
     if (id) { await prisma.document.deleteMany({ where: { userId: id } }); await prisma.user.deleteMany({ where: { id } }); }

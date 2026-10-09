@@ -14,6 +14,7 @@ import {
   updateProfile,
   changePassword,
   signOut,
+  removeAccount,
 } from "../services/store";
 const route = useRoute(),
   router = useRouter(),
@@ -107,7 +108,9 @@ async function deleteAccount() {
   if (deletionText.value !== "DELETE" || !user.value) return;
   busy.value = true;
   try {
-    throw Error("Account deletion is not available yet.");
+    await removeAccount();
+    notify("Account and publications deleted");
+    await router.push("/sign-in");
   } catch (e) {
     error.value = (e as Error).message;
   } finally {
@@ -273,7 +276,7 @@ async function deleteAccount() {
         stops all their sharing links. Readers will lose access.
       </p>
       <p class="muted small">
-        Account deletion is not available in this implementation stage.
+        Deleting your account permanently deletes its publications and sharing links.
       </p>
       <label class="field"
         >Type DELETE to confirm<input v-model="deletionText" autocomplete="off"

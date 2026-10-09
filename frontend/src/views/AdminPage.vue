@@ -3,7 +3,7 @@ import { computed, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ArrowLeft, ShieldCheck, Search, ExternalLink, Trash2 } from '@lucide/vue';
 import UiModal from '../components/UiModal.vue';
-import { state, deleteDocument, notify, delay, formatSize, formatDate, usage, type Publication } from '../services/store';
+import { state, api, loadAdmin, deleteDocument, notify, delay, formatSize, formatDate, usage, type Publication } from '../services/store';
 const route=useRoute(), router=useRouter();
 const section=computed(()=>String(route.params.section));
 const filter=ref('open'), search=ref(''), type=ref('all'), status=ref('all');
@@ -20,11 +20,11 @@ watch(account,a=>{quota.value=a?Math.round(a.quota/1000000):0},{immediate:true})
 watch(()=>route.fullPath,()=>{error.value='';search.value='';remove.value=null});
 function owner(id:string|null){return state.accounts.find(a=>a.id===id)?.name||'Anonymous'}
 function active(d:Publication){return !['deleted','removed'].includes(d.status)&&(!d.deleteAt||d.deleteAt>state.now)}
-async function operation(action:()=>void,message:string){error.value='';busy.value=true;try{await delay();action();notify(message)}catch(e){error.value=(e as Error).message}finally{busy.value=false}}
-async function dismiss(){await operation(()=>{if(report.value){report.value.status='resolved';report.value.decision='Dismissed'}},'Report dismissed')}
-async function confirmRemoval(){const d=remove.value;if(!d)return;await operation(()=>{deleteDocument(d.id,true);remove.value=null},'Publication removed')}
-async function saveQuota(){if(!Number.isInteger(Number(quota.value))||Number(quota.value)<1){error.value='Storage limit must be a positive whole number of MB.';return}await operation(()=>{if(account.value)account.value.quota=Number(quota.value)*1000000},'Account storage limit saved')}
-async function saveSettings(){const values=[settings.fileMB,settings.albumMB,settings.albumCount,settings.quotaMB];if(values.some(n=>!Number.isInteger(Number(n))||Number(n)<1)){error.value='File sizes, image count and account storage must be positive whole numbers.';return}if(!settings.retention.length){error.value='Allow at least one anonymous retention period.';return}if(!settings.retention.includes(Number(settings.defaultRetention))){error.value='Choose a default from the allowed retention periods.';return}await operation(()=>{state.settings={fileMB:Number(settings.fileMB),albumMB:Number(settings.albumMB),albumCount:Number(settings.albumCount),quotaMB:Number(settings.quotaMB),retention:[...settings.retention].sort((a,b)=>a-b),defaultRetention:Number(settings.defaultRetention)}},'Instance settings saved')}
+async function operation(action:()=>void | Promise<void>,message:string){error.value='';busy.value=true;try{await delay();await action();notify(message)}catch(e){error.value=(e as Error).message}finally{busy.value=false}}
+async function dismiss(){await operation(async()=>{if(report.value) await api('/admin/reports/'+report.value.id+'/dismiss',{method:'POST'}); await loadAdmin()},'Report dismissed')}
+async function confirmRemoval(){const d=remove.value;if(!d)return;await operation(async()=>{await api('/admin/publications/'+d.id,{method:'DELETE'});remove.value=null;await loadAdmin()},'Publication removed')}
+async function saveQuota(){if(!Number.isInteger(Number(quota.value))||Number(quota.value)<1){error.value='Storage limit must be a positive whole number of MB.';return}await operation(async()=>{if(account.value)await api('/admin/accounts/'+account.value.id,{method:'PATCH',body:JSON.stringify({quota:Number(quota.value)*1000000})});await loadAdmin()},'Account storage limit saved')}
+async function saveSettings(){const values=[settings.fileMB,settings.albumMB,settings.albumCount,settings.quotaMB];if(values.some(n=>!Number.isInteger(Number(n))||Number(n)<1)){error.value='File sizes, image count and account storage must be positive whole numbers.';return}if(!settings.retention.length){error.value='Allow at least one anonymous retention period.';return}if(!settings.retention.includes(Number(settings.defaultRetention))){error.value='Choose a default from the allowed retention periods.';return}await operation(async()=>{const value={fileMB:Number(settings.fileMB),albumMB:Number(settings.albumMB),albumCount:Number(settings.albumCount),quotaMB:Number(settings.quotaMB),retention:[...settings.retention].sort((a,b)=>a-b),defaultRetention:Number(settings.defaultRetention)};await api('/admin/settings',{method:'PATCH',body:JSON.stringify(value)});await loadAdmin()},'Instance settings saved')}
 function preview(d:Publication){router.push({path:`/app/documents/${d.id}/read`,query:{return:route.fullPath,moderation:'true'}})}
 </script>
 <template>

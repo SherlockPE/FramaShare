@@ -83,7 +83,16 @@ export async function sharingRoutes(server: FastifyInstance) {
     const l = await accessibleLink((request.params as { token: string }).token);
     const active = await readSession(request, l);
     const info = publicationInfo(l.document);
-    return { document: { ...info, source: `/api/share/${l.slug}/file`, images: info.images.map(a => ({ ...a, src: `/api/share/${l.slug}/file?image=${a.id}` })) }, link: linkInfo(l, l._count.sessions), session: active ? { id: active.id, token: l.slug, expiresAt: active.expiresAt!.getTime() } : null };
+    const managementToken = request.headers['x-manage-token'];
+    const manageAccess = typeof managementToken === 'string' && l.document.manageHash === tokenHash(managementToken);
+    const ownerAccess = request.account?.id === l.document.userId || request.account?.role === 'admin';
+    const privileged = manageAccess || ownerAccess;
+    if (l.password && !active && !privileged) {
+      info.title = 'Protected publication'; info.description = ''; info.attribution = ''; info.license = 'unspecified'; info.images = []; info.ownerId = null;
+    }
+    const source = privileged ? info.source + (manageAccess ? `?manage=${managementToken}` : '') : `/api/share/${l.slug}/file`;
+    const images = privileged ? info.images.map(a => ({ ...a, src: a.src + (manageAccess ? `&manage=${managementToken}` : '') })) : info.images.map(a => ({ ...a, src: `/api/share/${l.slug}/file?image=${a.id}` }));
+    return { document: { ...info, source, images, ...(manageAccess ? { manageToken: managementToken } : {}) }, link: linkInfo(l, l._count.sessions), session: active ? { id: active.id, token: l.slug, expiresAt: active.expiresAt!.getTime() } : null };
   });
   server.post('/api/share/:token/session', { schema: { body: { type: 'object', additionalProperties: false, properties: { password: { type: 'string', maxLength: 256 } } } }, config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request, reply) => {
     const l = await accessibleLink((request.params as { token: string }).token);

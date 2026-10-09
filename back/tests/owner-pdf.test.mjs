@@ -116,6 +116,12 @@ test('persistent accounts and private PDFs with independent clients', { skip: !p
     assert.equal((await upload(secondCookie)).statusCode, 500);
     prisma.$transaction = savedCreate;
     assert.equal((await readdir(process.env.STORAGE_PATH)).length, 2);
+    const savedWrite = storageService.saveFile;
+    try {
+      storageService.saveFile = async (stream, key) => { await savedWrite(stream, key); throw Error('Injected write failure'); };
+      assert.equal((await upload(secondCookie)).statusCode,500);
+      assert.equal((await readdir(process.env.STORAGE_PATH)).length,2);
+    } finally { storageService.saveFile = savedWrite; }
     assert.equal((await send('POST', '/api/auth/password', { oldPassword: 'incorrect-password', newPassword: 'replacement-password' }, secondCookie)).statusCode, 400);
     assert.equal((await send('POST', '/api/auth/password', { oldPassword: 'correct-password', newPassword: 'replacement-password' }, secondCookie)).statusCode, 200);
     assert.equal((await send('GET', document.source, undefined, secondCookie)).statusCode, 401);
@@ -124,6 +130,10 @@ test('persistent accounts and private PDFs with independent clients', { skip: !p
     assert.equal((await send('DELETE', document.source, undefined, finalCookie)).statusCode, 204);
     assert.equal((await send('GET', document.source, undefined, finalCookie)).statusCode, 404);
     assert.equal((await readdir(process.env.STORAGE_PATH)).length, 1);
+    const attempts = [];
+    for (let i=0;i<11;i++) attempts.push(await server.inject({method:'POST',url:'/api/auth/login',payload:{email:'invalid',password:''},headers:{origin,'x-forwarded-for':'192.0.2.99'}}));
+    assert.equal(attempts.at(-1).statusCode,429);
+    assert.ok(Number(attempts.at(-1).headers['retry-after'])>0);
   } finally {
     await prisma.document.deleteMany({ where: { userId: { in: accountIds } } });
     await prisma.user.deleteMany({ where: { id: { in: accountIds } } });

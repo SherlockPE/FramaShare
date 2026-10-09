@@ -7,7 +7,7 @@ const props = defineProps<{ documentId: string; link?: SharingLink }>(),
   emit = defineEmits<{ close: []; saved: [link: SharingLink] }>();
 const name = ref(props.link?.name || ""),
   protect = ref(!!props.link?.password),
-  password = ref(props.link?.password || ""),
+  password = ref(""),
   show = ref(false),
   expiry = ref(props.link?.expiresAt ? "custom" : "none"),
   date = ref(
@@ -18,7 +18,7 @@ const name = ref(props.link?.name || ""),
           month: "2-digit",
           day: "2-digit",
         }).format(props.link.expiresAt)
-      : "2026-10-13"
+      : new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Warsaw", year: "numeric", month: "2-digit", day: "2-digit" }).format(state.now + 86400000)
   ),
   time = ref(
     props.link?.expiresAt
@@ -63,7 +63,7 @@ const summary = computed(() =>
 );
 async function save() {
   error.value = "";
-  if (protect.value && !password.value.trim()) {
+  if (protect.value && !password.value.trim() && !props.link?.password) {
     error.value = "Enter a password or turn password protection off.";
     return;
   }
@@ -74,11 +74,11 @@ async function save() {
   saving.value = true;
   try {
     await delay();
-    const link = saveLink(
+    const link = await saveLink(
       props.documentId,
       {
         name: name.value,
-        password: protect.value ? password.value : "",
+        password: protect.value ? (password.value || undefined) : "",
         expiresAt: expiresAt.value,
         limit: limited.value ? Number(limit.value) : null,
         allowDownload: download.value,
@@ -112,6 +112,7 @@ async function save() {
         <div class="row">
           <input
             aria-label="Password"
+            :placeholder="link?.password ? 'Leave blank to keep the current password' : 'Password for readers'"
             v-model="password"
             :type="show ? 'text' : 'password'"
             required

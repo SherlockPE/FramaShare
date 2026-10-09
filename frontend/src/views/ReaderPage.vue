@@ -179,7 +179,7 @@ function download() {
     return;
   }
   const a = document.createElement("a");
-  a.href = url;
+  a.href = isShare.value && !preview.value ? url.replace('/file', '/download') : url;
   a.download =
     d.format === "album" ? `${d.title}-${d.position}` : `${d.title}.${d.format}`;
   a.click();
@@ -298,7 +298,7 @@ onBeforeUnmount(() => {
         :source="source || ''"
         :initial-page="publication.position"
         @position="position"
-        @reselect="selectAgain" /><EpubReader
+        @reselect="selectAgain" /><EpubReader :source="source"
         v-else-if="publication?.format === 'epub'"
         :initial-page="publication.position"
         :sample="publication.seed"

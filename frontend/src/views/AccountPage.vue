@@ -2,7 +2,7 @@
 import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { BookOpen, Eye, EyeOff, ArrowLeft, Check, Mail } from "@lucide/vue";
-import { signIn, notify } from "../services/store";
+import { signIn, notify, api } from "../services/store";
 const route = useRoute(),
   router = useRouter(),
   email = ref(""),
@@ -70,8 +70,12 @@ async function submit() {
   }
   busy.value = true;
   try {
-    if (forgot.value || reset.value) {
-      throw Error("Password reset is not available yet. SMTP integration is pending.");
+    if (forgot.value) {
+      await api('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email: email.value }) });
+      done.value = true;
+    } else if (reset.value) {
+      await api('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token: route.query.token || '', newPassword: password.value }) });
+      password.value = ''; confirm.value = ''; done.value = true;
     } else {
       await signIn(
         email.value.trim().toLowerCase(),
@@ -139,13 +143,11 @@ async function submit() {
           <p>
             {{
               forgot
-                ? `A reset message for ${email} has been simulated. No email was sent.`
-                : "Your new password has been accepted in this local demonstration."
+                ? "If the account exists, a reset link will be sent. Check your inbox."
+                : "Your password has been changed. Sign in again."
             }}
           </p>
-          <RouterLink v-if="forgot" class="button" :to="link('/reset-password')"
-            >Open demo reset link</RouterLink
-          ><RouterLink v-else class="button" :to="link('/sign-in')"
+          <RouterLink class="button" :to="link('/sign-in')"
             >Back to sign in</RouterLink
           >
         </div>
@@ -226,7 +228,7 @@ async function submit() {
           ><ArrowLeft :size="16" /> Back to sign in</RouterLink
         >
         <p class="demo-note">
-          Accounts and PDF uploads are stored on the server.<br />Password reset is not available yet.
+          Accounts and PDF uploads are stored on the server.<br />Password reset links expire after one hour.
         </p>
       </div>
     </section>

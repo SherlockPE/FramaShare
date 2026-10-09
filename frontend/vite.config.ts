@@ -1,1 +1,1 @@
-import {defineConfig} from 'vite'; import vue from '@vitejs/plugin-vue'; export default defineConfig({plugins:[vue()], server: { proxy: { "/api": "http://127.0.0.1:3000" } }});
+import {defineConfig} from 'vite'; import vue from '@vitejs/plugin-vue'; export default defineConfig({plugins:[vue()], server: { fs: { deny: ["**/.env", "**/.env.*", "**/*.{crt,pem}", "**/.git/**", "**/back/**", "**/.runtime/**", "**/uploads/**"] }, proxy: { "/api": process.env.API_TARGET || "http://127.0.0.1:3000" } }});

@@ -42,10 +42,8 @@ const selected = ref<File[]>([]),
   error = ref(""),
   dragging = ref(false),
   phase = ref("uploading"),
-  progress = ref(0),
   running = ref(false),
   cancelled = ref(false);
-let timers: ReturnType<typeof setTimeout>[] = [];
 const urls = ref<string[]>([]);
 const complete = computed(() => route.path.startsWith("/upload/complete/"));
 const doc = computed(() => getDocument(String(route.params.id)));
@@ -113,6 +111,7 @@ function demo() {
   clearPreviews();
 }
 async function begin() {
+  if (running.value) return;
   error.value = "";
   if (!title.value.trim()) {
     error.value = "Give your publication a title.";
@@ -129,16 +128,7 @@ async function begin() {
   cancelled.value = false;
   running.value = true;
   phase.value = "uploading";
-  progress.value = 0;
   router.replace("/upload/progress");
-  for (let i = 1; i <= 4; i++) {
-    await new Promise<void>((resolve) => {
-      timers.push(setTimeout(resolve, 180));
-    });
-    if (cancelled.value) return;
-    progress.value = i * 25;
-  }
-  phase.value = "processing";
   try {
     const publication = await upload({
       title: title.value.trim(),
@@ -152,6 +142,7 @@ async function begin() {
     });
     if (cancelled.value) {
       await deleteDocument(publication.id);
+      notify("Upload cancelled and publication removed");
       return;
     }
     router.replace("/upload/complete/" + publication.id);
@@ -164,9 +155,8 @@ async function begin() {
 }
 function cancel() {
   cancelled.value = true;
-  running.value = false;
   phase.value = "cancelled";
-  notify("Upload cancelled");
+  notify("Cancel requested. Waiting for server cleanup.");
   router.replace("/upload");
 }
 function saveManagement() {
@@ -181,13 +171,13 @@ function saveManagement() {
   notify("Management link saved");
 }
 onMounted(() => {
-  if (route.query.demo === "selected") demo();
-  if (route.query.demo === "failure") {
+  if (import.meta.env.MODE === 'test' && route.query.demo === "selected") demo();
+  if (import.meta.env.MODE === 'test' && route.query.demo === "failure") {
     demo();
     state.nextFailure = true;
     begin();
   }
-  if (route.query.demo === "cancelled") {
+  if (import.meta.env.MODE === 'test' && route.query.demo === "cancelled") {
     phase.value = "cancelled";
     notify("Upload cancelled");
   }
@@ -198,7 +188,6 @@ onMounted(() => {
 });
 onBeforeUnmount(() => {
   cancelled.value = true;
-  timers.forEach((t) => clearTimeout(t));
   clearPreviews();
 });
 </script>
@@ -260,18 +249,8 @@ onBeforeUnmount(() => {
           }}
         </h1>
         <p class="muted">{{ title }}</p>
-        <progress
-          :value="progress"
-          max="100"
-          :aria-label="phase === 'processing' ? 'Processing' : 'Upload progress'"
-        />
-        <p role="status">
-          {{
-            phase === "processing"
-              ? "Almost there. Getting everything ready for reading."
-              : progress + "% uploaded"
-          }}
-        </p>
+<progress max="100" aria-label="Uploading and validating publication" />
+        <p role="status">Uploading and validating your files. Waiting for server confirmation.</p>
         <p v-if="error" class="alert error" role="alert">{{ error }}</p>
         <div class="row wrap" style="justify-content: center">
           <button class="button secondary" @click="cancel">Cancel upload</button

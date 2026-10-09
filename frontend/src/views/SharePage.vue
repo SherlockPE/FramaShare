@@ -5,6 +5,7 @@ import { useRoute, useRouter } from "vue-router";
 import { BookOpen, LockKeyhole, Eye, EyeOff, Link2Off } from "@lucide/vue";
 import {
   state,
+  ui,
   currentUser,
   getDocument,
   getManaged,
@@ -37,7 +38,7 @@ const preview = computed(
       ))
 );
 const denial = computed(() =>
-  preview.value ? null : linkDenial(link.value, !!activeSession(token.value))
+  ui.accessError || (preview.value ? null : linkDenial(link.value, !!activeSession(token.value)))
 );
 const privateGate = computed(
   () => !!link.value?.password && !preview.value && !activeSession(token.value)
@@ -47,7 +48,7 @@ async function start() {
   error.value = "";
   try {
     await delay();
-    if (!preview.value) startSession(token.value, password.value);
+    if (!preview.value) await startSession(token.value, password.value);
     await router.push({
       path: `/share/${token.value}/read`,
       query: preview.value ? route.query : {},
@@ -69,6 +70,7 @@ async function start() {
           This link cannot open a publication right now. Ask the person who shared it for
           a new link.
         </p>
+        <button class="button secondary" @click="router.go(0)">Retry</button>
         <RouterLink to="/help/sharing-links" class="button secondary"
           >Help with access</RouterLink
         ></template

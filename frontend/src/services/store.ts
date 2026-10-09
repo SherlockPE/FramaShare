@@ -20,11 +20,14 @@ function restore(): State {
   return initial;
 }
 export const state = reactive<State>(restore());
-export const ui = reactive({ toast: '', storageError: false, sessionError: '' });
+export const ui = reactive({ toast: '', storageError: false, sessionError: '', accessError: '' });
 function persist() { try { localStorage.setItem('framashare-preferences', JSON.stringify(state.preferences)) } catch { ui.storageError = true } }
 watch(() => state.preferences, persist, { deep: true });
 export function advanceClock(milliseconds: number) { if (testDemo) state.now += milliseconds }
 export async function api<T = unknown>(path: string, options: RequestInit = {}): Promise<T> {
+  const managed = /^\/files\/([^/?]+)/.exec(path);
+  const managementToken = managed ? getDocument(managed[1]!)?.manageToken : null;
+  if (managementToken) options.headers = { ...options.headers, 'X-Manage-Token': managementToken };
   const response = await fetch('/api' + path, { ...options, credentials: 'same-origin', headers: options.body && !(options.body instanceof FormData) ? { 'Content-Type': 'application/json', ...options.headers } : options.headers });
   if (!response.ok) {
     const body = await response.json().catch(() => null);
@@ -39,6 +42,7 @@ function setAccount(user: Account | null) {
 export async function refreshLibrary() {
   const result = await api<{ documents: Publication[] }>('/files');
   state.documents = result.documents;
+  state.links = (await api<{ links: SharingLink[] }>('/links')).links;
 }
 let initialized = false;
 export async function initializeSession() {
@@ -46,6 +50,7 @@ export async function initializeSession() {
   try {
     const { user } = await api<{ user: Account | null }>('/auth/me');
     setAccount(user);
+    state.settings = await api<State['settings']>('/settings');
     if (user) await refreshLibrary();
     initialized = true; ui.sessionError = '';
   } catch (error) { ui.sessionError = (error as Error).message; throw error }
@@ -62,10 +67,18 @@ export async function changePassword(oldPassword: string, newPassword: string) {
   await api('/auth/password', { method: 'POST', body: JSON.stringify({ oldPassword, newPassword }) });
   setAccount(null);
 }
-export async function updateDocument(id: string, title: string, description: string) {
-  const document = await api<Publication>('/files/' + id, { method: 'PATCH', body: JSON.stringify({ title, description }) });
+export async function updateDocument(id: string, title: string, description: string, images?: ImageItem[]) {
+  const document = await api<Publication>('/files/' + id, { method: 'PATCH', body: JSON.stringify({ title, description, ...(images ? { images: images.map(({ id, caption, alt }) => ({ id, caption, alt })) } : {}) }) });
   const index = state.documents.findIndex(d => d.id === id);
-  if (index >= 0) state.documents[index] = document;
+  if (index >= 0) {
+    const managementToken = state.documents[index]?.manageToken;
+    if (managementToken) {
+      document.manageToken = managementToken;
+      document.source += '?manage=' + managementToken;
+      document.images = document.images.map(a => ({ ...a, src: a.src + '&manage=' + managementToken }));
+    }
+    state.documents[index] = document;
+  }
 }
 export function notify(message: string) { ui.toast = message; setTimeout(() => { if (ui.toast === message) ui.toast = '' }, 4000) }
 export const currentUser = () => state.accounts.find(a => a.id === state.currentUserId);
@@ -82,8 +95,8 @@ export function getManaged(token: string) { return state.documents.find(d => d.m
 export function linkDenial(link: SharingLink | undefined, active = false): string | null { if (!link) return 'Link unavailable'; const d = getDocument(link.documentId); if (!d || d.status === 'deleted') return 'Publication deleted'; if (d.status === 'removed') return 'Publication removed by a moderator'; if (d.deleteAt && d.deleteAt <= state.now) return 'Publication deleted'; if (d.status === 'processing') return 'Publication processing'; if (d.status === 'failed') return 'Publication processing failed'; if (link.revoked) return 'Link revoked'; if (link.expiresAt && link.expiresAt <= state.now) return 'Link expired'; if (!active && link.limit !== null && link.used >= link.limit) return 'Reading session limit reached'; return null }
 export function activeSession(token: string) { return state.sessions.find(s => s.token === token && s.expiresAt > state.now) }
 export function sessionDenial(token: string) { const link = state.links.find(l => l.token === token); return linkDenial(link, true) || (!activeSession(token) ? 'Reading session ended' : null) }
-export function startSession(token: string, password: string) { if (!testDemo) throw Error("Sharing is not available yet."); const link = state.links.find(l => l.token === token); const denial = linkDenial(link, !!activeSession(token)); if (denial) throw Error(denial); if (!link) throw Error('Link unavailable'); const existing = activeSession(token); if (existing) return existing; if (link.password && link.password !== password) throw Error('Incorrect password. Try again.'); const session = { id: uid('session'), token, expiresAt: state.now + 3600000 }; link.used++; state.sessions.push(session); return session }
-export function claimDocument(token: string, accountId: string) { if (!testDemo) throw Error("Anonymous uploads are not available yet."); const d = getManaged(token), a = state.accounts.find(a => a.id === accountId); if (!d || !a) throw Error('Management link unavailable'); if (usage(accountId) + d.size > a.quota) throw Error('Not enough storage. Free up space before adding this publication.'); d.ownerId = accountId; d.manageToken = null; d.deleteAt = null; d.updatedAt = state.now; return d }
+export function startSession(token: string, password: string): ReadingSession | Promise<ReadingSession> { if (!testDemo) return api<ReadingSession>('/share/' + token + '/session', { method: 'POST', body: JSON.stringify({ password }) }).then(session => { state.sessions = state.sessions.filter(s => s.token !== token); state.sessions.push(session); return session; }); const link = state.links.find(l => l.token === token); const denial = linkDenial(link, !!activeSession(token)); if (denial) throw Error(denial); if (!link) throw Error('Link unavailable'); const existing = activeSession(token); if (existing) return existing; if (link.password && link.password !== password) throw Error('Incorrect password. Try again.'); const session = { id: uid('session'), token, expiresAt: state.now + 3600000 }; link.used++; state.sessions.push(session); return session }
+export function claimDocument(token: string, accountId: string): Publication | Promise<Publication> { if (!testDemo) return api<Publication>('/manage/' + token + '/claim', { method: 'POST' }).then(d => { state.documents = state.documents.filter(p => p.id !== d.id); state.documents.unshift(d); return d; }); const d = getManaged(token), a = state.accounts.find(a => a.id === accountId); if (!d || !a) throw Error('Management link unavailable'); if (usage(accountId) + d.size > a.quota) throw Error('Not enough storage. Free up space before adding this publication.'); d.ownerId = accountId; d.manageToken = null; d.deleteAt = null; d.updatedAt = state.now; return d }
 function deleteDemoDocument(id: string, moderated = false) { const d = getDocument(id); if (d) { d.status = moderated ? 'removed' : 'deleted'; d.manageToken = null; releaseFiles(id); state.reports.filter(r => r.documentId === id && r.status === 'open').forEach(r => { r.status = 'resolved'; r.decision = moderated ? 'Publication removed' : 'Publication deleted' }) } }
 export async function delay() { await new Promise(r => setTimeout(r, 350)); if (state.nextFailure) { state.nextFailure = false; throw Error('Connection interrupted. Please try again.') } }
 export function deleteDocument(id: string, moderated = false): void | Promise<void> {
@@ -93,26 +106,26 @@ export function deleteDocument(id: string, moderated = false): void | Promise<vo
   });
 }
 export async function upload(input: { title: string; description: string; format: Format; selected: File[]; retention: number; sample?: boolean; license?: License; attribution?: string }) {
-  if (!currentUser()) throw Error('Sign in before uploading. Anonymous uploads are not available yet.');
-  if (input.format !== 'pdf') throw Error('PDF uploads are available. EPUB and albums are not available yet.');
+
   let selected = input.selected;
   if (input.sample) {
     const response = await fetch('/samples/workshop.pdf');
     if (!response.ok) throw Error('Sample file unavailable.');
     selected = [new File([await response.blob()], 'workshop.pdf', { type: 'application/pdf' })];
   }
-  if (selected.length !== 1) throw Error('Choose one PDF file.');
+  if (!selected.length || (input.format !== 'album' && selected.length !== 1)) throw Error('Choose publication files.');
   const form = new FormData();
   form.append('title', input.title); form.append('description', input.description);
   form.append('license', input.license ?? 'unspecified');
   form.append('attribution', input.attribution ?? '');
-  form.append('file', selected[0]!);
+  form.append('retention', String(input.retention));
+  for (const file of selected) form.append('file', file);
   const publication = await api<Publication>('/files/upload', { method: 'POST', body: form });
   state.documents.unshift(publication);
   return publication;
 }
-export function saveLink(documentId: string, input: Partial<SharingLink>, id?: string) { if (!testDemo) throw Error("Sharing is not available yet."); if (!input.name?.trim()) throw Error('Give this link a name.'); if (input.limit != null && (!Number.isInteger(input.limit) || input.limit < 1)) throw Error('Session limit must be a positive whole number.'); if (input.expiresAt != null && (!Number.isFinite(input.expiresAt) || input.expiresAt <= state.now)) throw Error('Choose a date in the future.'); const old = state.links.find(l => l.id === id); if (old) { Object.assign(old, input); return old } const link: SharingLink = { id: uid('link'), token: uid('read'), documentId, name: input.name, password: '', expiresAt: null, limit: null, used: 0, allowDownload: true, revoked: false, ...input }; state.links.push(link); return link }
-export function addReport(documentId: string, reason: string, description: string) { if (!testDemo) throw Error("Reports are not available yet."); if (!reason || !description.trim()) throw Error('Choose a reason and describe the concern.'); state.reports.unshift({ id: uid('report'), documentId, reason, description, createdAt: state.now, status: 'open' }); notify('Report submitted') }
+export function saveLink(documentId: string, input: Partial<SharingLink>, id?: string): SharingLink | Promise<SharingLink> { if (!testDemo) return api<SharingLink>('/files/' + documentId + '/links' + (id ? '/' + id : ''), { method: id ? 'PATCH' : 'POST', body: JSON.stringify({ name: input.name, password: input.password, expiresAt: input.expiresAt, limit: input.limit, allowDownload: input.allowDownload, revoked: input.revoked }) }).then(link => { state.links = state.links.filter(l => l.id !== link.id); state.links.push(link); return link; }); if (!input.name?.trim()) throw Error('Give this link a name.'); if (input.limit != null && (!Number.isInteger(input.limit) || input.limit < 1)) throw Error('Session limit must be a positive whole number.'); if (input.expiresAt != null && (!Number.isFinite(input.expiresAt) || input.expiresAt <= state.now)) throw Error('Choose a date in the future.'); const old = state.links.find(l => l.id === id); if (old) { Object.assign(old, input); return old } const link: SharingLink = { id: uid('link'), token: uid('read'), documentId, name: input.name, password: '', expiresAt: null, limit: null, used: 0, allowDownload: true, revoked: false, ...input }; state.links.push(link); return link }
+export function addReport(documentId: string, reason: string, description: string) { if (!testDemo) return api('/reports', { method: 'POST', body: JSON.stringify({ documentId, reason, description }) }).then(() => { notify('Report submitted'); }); if (!reason || !description.trim()) throw Error('Choose a reason and describe the concern.'); state.reports.unshift({ id: uid('report'), documentId, reason, description, createdAt: state.now, status: 'open' }); notify('Report submitted') }
 export async function copyLink(path: string) { const url = new URL(path, location.origin).href; try { await navigator.clipboard.writeText(url); notify('Link copied') } catch { const field = Array.from(document.querySelectorAll<HTMLElement>('.url')).find(node => node.textContent?.trim() === url); if (field) { field.focus(); const range = document.createRange(); range.selectNodeContents(field); const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range) } notify('Copy unavailable. Select the link and copy it manually.') } return url }
 export async function signIn(email: string, password: string, name?: string) {
   const { user } = await api<{ user: Account }>(name === undefined ? '/auth/login' : '/auth/register', { method: 'POST', body: JSON.stringify({ email, password, ...(name === undefined ? {} : { name }) }) });
@@ -120,9 +133,36 @@ export async function signIn(email: string, password: string, name?: string) {
   await refreshLibrary();
   return user;
 }
-export function imageSource(d: Publication, index: number) { const item = d.images[index]; return d.seed ? item?.src : files.get(d.id)?.urls[Number(item?.src)] }
+export function imageSource(d: Publication, index: number) { const item = d.images[index]; return item?.src.startsWith('/api/') || d.seed ? item?.src : files.get(d.id)?.urls[Number(item?.src)] }
 
 if (typeof window !== 'undefined') {
   window.addEventListener('beforeunload', () => files.forEach((_, id) => releaseFiles(id)));
   setInterval(() => { state.now = Date.now() }, 1000);
+}
+
+export async function removeAccount() {
+  await api('/auth/account', { method: 'DELETE' });
+  setAccount(null);
+}
+
+export async function loadPublicationRoute(path: string, id: string, managementToken?: string) {
+  ui.accessError = '';
+  if (path.startsWith('/share/')) {
+    state.links = state.links.filter(l => l.token !== id);
+    state.sessions = state.sessions.filter(s => s.token !== id);
+    const data = await api<{ document: Publication; link: SharingLink; session: ReadingSession | null }>('/share/' + id, managementToken ? { headers: { 'X-Manage-Token': managementToken } } : {});
+    state.documents = state.documents.filter(d => d.id !== data.document.id); state.documents.push(data.document);
+    state.links = state.links.filter(l => l.id !== data.link.id); state.links.push(data.link);
+    state.sessions = state.sessions.filter(s => s.token !== id); if (data.session) state.sessions.push(data.session);
+  } else if (path.startsWith('/manage/')) {
+    const d = await api<Publication>('/manage/' + id);
+    state.documents = state.documents.filter(p => p.id !== d.id); state.documents.push(d);
+    const result = await api<{ links: SharingLink[] }>('/files/' + d.id + '/links');
+    state.links = state.links.filter(l => l.documentId !== d.id).concat(result.links);
+  }
+}
+
+export async function loadAdmin() {
+  const data = await api<Pick<State, 'accounts' | 'documents' | 'reports' | 'settings'>>('/admin/state');
+  Object.assign(state, data);
 }

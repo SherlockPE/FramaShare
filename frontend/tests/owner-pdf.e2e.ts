@@ -4,8 +4,8 @@ import { PDFDocument, StandardFonts } from 'pdf-lib';
 test('account, durable PDF and independent client without local owner state', async ({ browser, baseURL }) => {
   const email = `browser-${crypto.randomUUID()}@example.com`;
   const password = 'correct-password';
-  const author = await browser.newContext();
-  const second = await browser.newContext();
+  const author = await browser.newContext({ extraHTTPHeaders: { 'X-Forwarded-For': '192.0.2.10' } });
+  const second = await browser.newContext({ extraHTTPHeaders: { 'X-Forwarded-For': '192.0.2.11' } });
   const guest = await browser.newContext();
   const page = await author.newPage();
   try {

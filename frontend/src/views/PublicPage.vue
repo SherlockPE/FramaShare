@@ -30,11 +30,11 @@ const articles = [
       ],
       [
         "Size and album limits",
-        "The default demonstration limit is 100 MB per file, or 50 images and 100 MB for an album. Your account has 1 GB of space. The instance administrator can change these limits. The upload form always shows the current limits before you select files.",
+        "The default limit is 100 MB per file, or 50 images and 100 MB for an album. Your account has 1 GB of space. The instance administrator can change these limits. The upload form always shows the current limits before you select files.",
       ],
       [
         "After you publish",
-        "Give your publication a title and description, then create a sharing link. If processing fails, retry the upload. A locally selected file is available during this browser session; after a refresh, use Select file again. Bundled examples remain available.",
+        "Give your publication a title and description, then create a sharing link. If processing fails, retry the upload. Uploaded files and metadata are stored on the server and remain available after refresh or sign-in on another device.",
       ],
     ],
   },
@@ -73,8 +73,8 @@ const articles = [
         "Before the reader enters the correct password, the access screen does not show the title, description or cover. An incorrect password does not use a reading session. The reader must explicitly choose Start reading after entering the password.",
       ],
       [
-        "A local demonstration",
-        "This prototype simulates access controls in your browser. It is useful for trying the experience, but it does not provide production security or sharing between different devices. See Prototype overview for the full boundaries.",
+        "Server access checks",
+        "The server checks the link and reading session on each file request. Expiry, revocation and deletion stop further reads; already received content cannot be recalled.",
       ],
     ],
   },
@@ -130,7 +130,7 @@ const articles = [
       ],
       [
         "Reading ebooks",
-        "Open Contents to choose a chapter. Reading settings change font size, line spacing, column width and the light, dark or sepia theme. Your preferences and reading position are remembered. Uploaded EPUBs use a clearly marked example preview in this prototype.",
+        "Open Contents to choose a chapter. Reading settings change font size, line spacing, column width and the light, dark or sepia theme. Reading preferences are saved in this browser. Uploaded EPUBs show their actual chapters and contents; unsupported fixed-layout or encrypted books are rejected.",
       ],
       [
         "Exploring albums",
@@ -544,19 +544,17 @@ const faqs = [
       <section id="prototype">
         <h2>About this prototype</h2>
         <p>
-          This is a local frontend demonstration. Accounts, email, processing and access
-          controls are simulated in this browser. Metadata stays in local storage;
-          selected files stay in memory for the browser session. Links work in the same
-          local instance and browser state.
+          Accounts, metadata, files and access rules are stored on the server. Recipient links work on another device without the author’s browser state. Browser storage holds reading preferences only.
         </p>
-        <RouterLink class="button secondary" to="/overview"
-          >Explore the prototype</RouterLink
+        <RouterLink class="button secondary" to="/upload"
+          >Upload a publication</RouterLink
         >
       </section>
     </article>
   </div>
   <div v-else-if="legal" class="page narrow legal-page">
     <span class="badge">Prototype example · Non-binding</span>
+    <p class="alert" role="status">Draft: these terms and privacy information require approval by the instance owner before public release.</p>
     <h1>{{ route.path === "/privacy" ? "Privacy notice" : "Terms of use" }}</h1>
     <div class="alert">
       This is sample content for a local prototype. It is not a legally binding policy or
@@ -564,38 +562,28 @@ const faqs = [
     </div>
     <template v-if="route.path === '/privacy'"
       ><section>
-        <h2>What this demonstration stores</h2>
+        <h2>What the instance stores</h2>
         <p>
-          Publication metadata, account names and email addresses, sharing settings,
-          reports and preferences are stored in this browser’s local storage. Account
-          passwords and uploaded file contents are not stored there. Locally selected
-          files stay in memory for the current browser session.
+          The server stores account names and email addresses, password hashes, publication files and metadata, sharing rules, sessions and reports. This browser stores reading preferences and uses HttpOnly cookies for authentication and reading sessions.
         </p>
       </section>
       <section>
-        <h2>No outside service</h2>
+        <h2>Email and operations</h2>
         <p>
-          There is no real authentication service, email delivery, payment processing or
-          external analytics. Demonstration links use this local instance and browser
-          state. Access controls are simulated and should not be treated as protection for
-          sensitive documents.
+          Password reset messages are delivered through the instance’s SMTP provider. The owner must identify that provider, the operator, contact details and any operational logging or backup retention before approving this notice.
         </p>
       </section>
       <section>
         <h2>Clearing your data</h2>
         <p>
-          Use Reset demo on the prototype overview to clear prototype data and restore its
-          example content. Deleting a publication stops access to it in the local
-          demonstration. Clearing browser storage also removes saved metadata.
+          Delete a publication from its management page, or delete your account and its files in Account settings. Anonymous publications expire after their selected retention period. The owner must specify how these deletions affect retained backups.
         </p>
       </section></template
     ><template v-else
       ><section>
         <h2>Trying the prototype</h2>
         <p>
-          Use your own documents or the included examples to explore the publishing and
-          reading flows. The prototype is intended for evaluation. It does not provide a
-          production publishing or file-sharing service.
+          Use documents you have permission to publish. These draft terms need the instance owner’s approval, operator details and release-specific availability commitments before public use.
         </p>
       </section>
       <section>
@@ -603,7 +591,7 @@ const faqs = [
         <p>
           Only share material you are allowed to publish. Readers can report a concern
           without an account. The administrator can review a report and remove the
-          publication in the local simulation.
+          publication on this instance.
         </p>
       </section>
       <section>

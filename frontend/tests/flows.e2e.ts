@@ -1,20 +1,125 @@
-import {test,expect} from '@playwright/test';import type {Page} from '@playwright/test';import {mkdirSync} from 'node:fs';
-const dir='docs/verification/screenshots';mkdirSync(dir,{recursive:true});
-async function overview(page:Page,role='author'){await page.goto('/overview');await page.getByRole('button',{name:'Reset demo',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'Reset demo',exact:true}).click();await page.getByRole('button',{name:'Use '+role+' role',exact:true}).click()}
-async function chooseSample(page:Page){await page.goto('/upload');await page.getByRole('button',{name:'Try it with our sample PDF'}).click()}
-async function signIn(page:Page,email='alex@example.com'){await page.getByLabel('Email address').fill(email);await page.getByLabel('Password',{exact:true}).fill('readingroom');await page.getByRole('button',{name:'Sign in',exact:true}).click()}
-async function readState(page:Page){return page.evaluate(()=>JSON.parse(localStorage.getItem('framashare-prototype-v1')!))}
-const errors:string[]=[];test.beforeEach(async({page})=>{page.on('pageerror',e=>errors.push(e.message))});test.afterEach(()=>{expect(errors.splice(0)).toEqual([])});
-test('1 registration → selected local PDF → publication → actual reader → library',async({page})=>{await overview(page,'recipient');await page.goto('/');await page.getByRole('link',{name:'Sign in',exact:true}).first().click();await page.getByRole('link',{name:'Sign up',exact:true}).click();await page.getByLabel('Your name').fill('Jamie Reader');await page.getByLabel('Email address').fill('jamie@example.com');await page.getByLabel('Password',{exact:true}).fill('readingroom');await page.getByRole('button',{name:'Create account'}).click();await expect(page).toHaveURL(/app\/library/);await page.goto('/upload');await page.getByLabel('Choose publication files').setInputFiles('public/samples/workshop.pdf');await page.getByLabel('Title',{exact:true}).fill('Our first workshop');await page.getByRole('button',{name:'Upload document',exact:true}).click();await expect(page.getByRole('heading',{name:'Your document is ready'})).toBeVisible();await page.getByRole('link',{name:'Open publication',exact:true}).click();await page.getByRole('link',{name:'Open reader',exact:true}).click();await expect(page.getByLabel('PDF page',{exact:true})).toBeVisible();await expect(page.locator('.textLayer span').first()).toBeAttached();await page.getByRole('button',{name:'Next page',exact:true}).click();await expect(page.getByLabel('Page number')).toHaveValue('2');await page.getByRole('link',{name:'Back from reader'}).click();await page.getByRole('link',{name:'Your library',exact:true}).first().click();await expect(page.getByRole('heading',{name:'Our first workshop'})).toBeVisible()});
-test('2 anonymous 7 days → save management → recipient link → claim keeps recipient and invalidates manage',async({page})=>{await overview(page,'recipient');await chooseSample(page);await expect(page.getByLabel('Keep this publication for')).toHaveValue('7');await page.getByRole('button',{name:'Upload document',exact:true}).click();await expect(page.getByRole('heading',{name:'Save your management link'})).toBeVisible();const data=await readState(page),d=data.documents[0];expect(d.ownerId).toBeNull();expect(Math.round((d.deleteAt-data.now)/86400000)).toBe(7);await page.getByRole('button',{name:'Copy management link'}).click();await page.getByRole('link',{name:'Create sharing link'}).click();await page.getByLabel('Link name').fill('Anonymous readers');await page.getByRole('dialog').getByRole('button',{name:'Create link',exact:true}).click();await expect(page.getByRole('heading',{name:'Anonymous readers'})).toBeVisible();const token=(await readState(page)).links.find((l:any)=>l.documentId===d.id).token;await page.getByRole('link',{name:'Add to my library',exact:true}).click();await page.getByRole('button',{name:'Sign in to continue'}).click();await signIn(page);await expect(page).toHaveURL(/manage\/.*\/claim/);await page.getByRole('button',{name:'Add to my library',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'Add publication'}).click();await expect(page).toHaveURL(new RegExp('/app/documents/'+d.id));const claimed=(await readState(page)).documents.find((p:any)=>p.id===d.id);expect(claimed.manageToken).toBeNull();expect(claimed.deleteAt).toBeNull();await page.goto('/manage/'+d.manageToken);await expect(page.getByRole('heading',{name:'Management unavailable'})).toBeVisible();await page.goto('/share/'+token);await expect(page.getByRole('button',{name:'Start reading'})).toBeVisible()});
-test('3 protected link custom calendar limit download off → wrong password costs zero → start costs one',async({page})=>{await overview(page);await page.goto('/app/documents/doc1?dialog=link');await page.getByLabel('Link name').fill('Our private group');await page.getByLabel('Require a password').check();await page.getByLabel('Password',{exact:true}).fill('sunflower');await page.getByLabel('Link expiry').selectOption('custom');await page.getByLabel('Date',{exact:true}).fill('2026-10-13');await page.getByLabel('Time',{exact:true}).fill('18:00');await page.getByLabel('Limit reading sessions').check();await page.getByLabel('Number of sessions').fill('1');await page.getByLabel('Allow download').uncheck();await page.screenshot({path:dir+'/sharing-calendar-desktop.png',fullPage:true});await page.getByRole('dialog').getByRole('button',{name:'Create link',exact:true}).click();await expect(page.getByRole('heading',{name:'Our private group',exact:true})).toBeVisible();const link=(await readState(page)).links.find((l:any)=>l.name==='Our private group');expect(link.limit).toBe(1);expect(link.allowDownload).toBe(false);await page.goto('/share/'+link.token);await expect(page.getByText('Community workshop handbook',{exact:true})).not.toBeVisible();await page.getByLabel('Password',{exact:true}).fill('wrong');await page.getByRole('button',{name:'Start reading'}).click();await expect(page.getByRole('alert')).toContainText('Incorrect password');expect((await readState(page)).links.find((l:any)=>l.token===link.token).used).toBe(0);await page.getByLabel('Password',{exact:true}).fill('sunflower');await page.getByRole('button',{name:'Start reading'}).click();await expect(page.getByLabel('PDF page',{exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Download publication'})).not.toBeVisible();expect((await readState(page)).links.find((l:any)=>l.token===link.token).used).toBe(1)});
-test('4 reload preserves session and exhausted limit blocks a new session',async({page})=>{await overview(page,'recipient');await page.goto('/share/protected');await page.getByLabel('Password',{exact:true}).fill('garden');await page.getByRole('button',{name:'Start reading'}).click();await expect(page.getByLabel('PDF page',{exact:true})).toBeVisible();await page.reload();await expect(page.getByLabel('PDF page',{exact:true})).toBeVisible();expect((await readState(page)).links.find((l:any)=>l.token==='protected').used).toBe(1);await page.goto('/overview');await page.getByRole('button',{name:'Advance 61 minutes'}).click();await page.goto('/share/protected/read');await expect(page.getByRole('heading',{name:'Reading session ended'})).toBeVisible();await page.goto('/share/exhausted');await expect(page.getByRole('heading',{name:'Reading session limit reached'})).toBeVisible()});
-test('5 revocation interrupts active reader in another tab and leaves second link available',async({page,context})=>{await overview(page);await page.goto('/share/workshop');await page.getByRole('button',{name:'Start reading'}).click();await expect(page.getByLabel('PDF page',{exact:true})).toBeVisible();const author=await context.newPage();await author.goto('/app/documents/doc1');const row=author.locator('.link-row').filter({has:author.getByRole('heading',{name:'Workshop readers',exact:true})});await row.getByRole('button',{name:'More actions'}).click();await author.getByRole('button',{name:'Revoke link',exact:true}).click();await author.getByRole('dialog').getByRole('button',{name:'Revoke link',exact:true}).click();await expect(page.getByRole('heading',{name:'Link revoked'})).toBeVisible();await expect(page.getByLabel('PDF page',{exact:true})).not.toBeVisible();await page.goto('/share/protected');await expect(page.getByLabel('Password',{exact:true})).toBeVisible();await author.close()});
-test('6 EPUB settings persist; album captions order and alt reach reader',async({page})=>{await overview(page);await page.goto('/app/documents/doc2/read');await expect(page.locator('.epub-reader')).toBeVisible();const buttons=await page.getByRole('button').allTextContents();await page.getByRole('button',{name:'Reading settings'}).click();await page.getByLabel('Text size').selectOption('24');await page.getByLabel('Line spacing').selectOption('2');await page.getByLabel('Theme',{exact:true}).selectOption('sepia');await page.reload();await expect(page.locator('.epub-reader')).toBeVisible();expect((await readState(page)).preferences.fontSize).toBe(24);expect((await readState(page)).preferences.theme).toBe('sepia');await page.goto('/app/documents/doc3/edit');await page.getByLabel('Caption',{exact:true}).first().fill('A fresh beginning');await page.getByLabel('Alternative text',{exact:true}).first().fill('Garden reading bench');await page.getByRole('button',{name:'Move down'}).first().click();await page.getByRole('button',{name:'Save changes',exact:true}).click();await page.getByRole('link',{name:'Open reader',exact:true}).click();await expect(page.locator('.album-reader')).toBeVisible();await page.getByRole('button',{name:'Next image'}).click();await expect(page.getByText('A fresh beginning',{exact:true})).toBeVisible();await expect(page.getByAltText('Garden reading bench')).toBeVisible()});
-test('7 recipient report → admin removes publication → all recipient links unavailable',async({page})=>{await overview(page,'recipient');await page.goto('/share/workshop');await page.getByRole('button',{name:'Start reading'}).click();await expect(page.getByLabel('PDF page',{exact:true})).toBeVisible();await page.getByRole('button',{name:'Report abuse'}).click();await page.getByLabel('Reason').selectOption({index:1});await page.getByLabel('Description').fill('Please review this publication.');await page.getByRole('button',{name:'Submit report',exact:true}).click();await expect(page.getByText('Thank you for letting us know. A moderator will review this publication.')).toBeVisible();const report=(await readState(page)).reports[0];await page.goto('/overview');await page.getByRole('button',{name:'Use admin role'}).click();await page.goto('/admin/reports/'+report.id);await page.getByRole('button',{name:'Remove publication',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'Remove publication',exact:true}).click();await expect(page.getByRole('dialog')).not.toBeVisible();await page.goto('/share/workshop');await expect(page.getByRole('heading',{name:'Publication removed by a moderator'})).toBeVisible();await page.goto('/share/protected');await expect(page.getByRole('heading',{name:'Publication removed by a moderator'})).toBeVisible()});
-test('8 simulated upload failure → retry → success; cancellation creates no publication',async({page})=>{await overview(page);await page.getByRole('button',{name:'Fail next operation'}).click();await chooseSample(page);await page.getByRole('button',{name:'Upload document',exact:true}).click();await expect(page.getByRole('heading',{name:'Upload interrupted'})).toBeVisible();await page.getByRole('button',{name:'Retry upload'}).click();await expect(page.getByRole('heading',{name:'Your document is ready'})).toBeVisible();const before=(await readState(page)).documents.length;await chooseSample(page);await page.getByRole('button',{name:'Upload document',exact:true}).click();await page.getByRole('button',{name:'Cancel upload'}).click();await expect(page).toHaveURL(/\/upload$/);await page.waitForTimeout(1300);expect((await readState(page)).documents.length).toBe(before)});
-test('responsive surfaces and open controls at desktop/mobile/320/768/1024 and 200% equivalent layout',async({page})=>{test.setTimeout(120000);await overview(page);for(const width of [1440,390,320,768,1024,720]){await page.setViewportSize({width,height:1000});for(const path of ['/app/library','/app/library?view=list','/upload','/app/documents/doc1','/app/documents/doc1?dialog=link','/share/protected','/app/documents/doc1/read','/app/documents/doc2/read','/app/documents/doc3/read']){await page.goto(path);await page.waitForTimeout(700);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`${width} ${path}`).toBeTruthy();if(width===1440||width===390){const name=path.replace(/[^a-z0-9]+/gi,'-');await page.screenshot({path:`${dir}/${name}-${width}.png`,fullPage:!path.endsWith('/read')})}}}await page.setViewportSize({width:390,height:844});await page.goto('/app/documents/doc1?dialog=link');await page.getByLabel('Link expiry').selectOption('custom');await page.screenshot({path:dir+'/sharing-calendar-mobile.png',fullPage:true});await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).not.toBeVisible();await page.goto('/app/library');await page.getByRole('button',{name:'Filters',exact:true}).click();await page.screenshot({path:dir+'/library-filters-mobile.png',fullPage:true});await page.keyboard.press('Escape');await page.getByRole('button',{name:'Open navigation'}).click();await page.screenshot({path:dir+'/mobile-navigation.png',fullPage:true});await page.keyboard.press('Escape');await expect(page.getByRole('navigation',{name:'Mobile navigation'})).not.toBeVisible()});
-test('local file recovery, upload validation and failed claim preserve data',async({page})=>{await overview(page,'recipient');await page.goto('/upload');await page.getByLabel('Choose publication files').setInputFiles({name:'notes.docx',mimeType:'application/octet-stream',buffer:Buffer.from('unsupported')});await expect(page.getByRole('alert')).toContainText('Mixed file types are not supported');await page.getByLabel('Choose publication files').setInputFiles('public/samples/workshop.pdf');await page.getByRole('button',{name:'Upload document',exact:true}).click();await expect(page.getByRole('heading',{name:'Your document is ready'})).toBeVisible();await page.getByRole('link',{name:'Manage publication',exact:true}).click();await page.getByRole('link',{name:'Open reader',exact:true}).click();await expect(page.getByLabel('PDF page',{exact:true})).toBeVisible();await page.reload();await expect(page.getByRole('heading',{name:'Select your file again'})).toBeVisible();await page.getByLabel('Select original publication file again').setInputFiles('public/samples/workshop.pdf');await expect(page.getByLabel('PDF page',{exact:true})).toBeVisible();await page.goto('/overview');await page.getByRole('button',{name:'Anonymous claim: storage full'}).click();const before=(await readState(page)).documents.at(-1);await page.getByRole('button',{name:'Add to my library',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'Add publication'}).click();await expect(page.getByRole('alert')).toContainText('Not enough storage');const after=(await readState(page)).documents.find((d:any)=>d.id===before.id);expect(after.ownerId).toBeNull();expect(after.manageToken).toBe(before.manageToken);expect(after.deleteAt).toBe(before.deleteAt)});
-test('link validation, keyboard focus and anonymous upload screenshots',async({page})=>{await overview(page);await page.goto('/app/documents/doc1');await page.getByRole('button',{name:'Create link',exact:true}).click();await page.getByLabel('Link name').fill('Keyboard group');await page.getByLabel('Link expiry').selectOption('custom');await page.getByLabel('Date',{exact:true}).fill('');await expect(page.getByRole('dialog')).toBeVisible();await page.getByLabel('Date',{exact:true}).fill('2020-01-01');await page.getByRole('dialog').getByRole('button',{name:'Create link',exact:true}).click();await expect(page.getByRole('alert')).toContainText('Choose a date in the future');await page.getByRole('dialog').getByRole('button',{name:'Create link',exact:true}).focus();await page.keyboard.press('Tab');await expect(page.getByRole('button',{name:'Close dialog'})).toBeFocused();await page.keyboard.press('Escape');await expect(page.getByRole('button',{name:'Create link',exact:true})).toBeFocused();await page.goto('/overview');await page.getByRole('button',{name:'Use recipient role'}).click();for(const width of [1440,390]){await page.setViewportSize({width,height:900});await page.goto('/upload');await page.getByRole('button',{name:'Try it with our sample PDF'}).click();await page.screenshot({path:`${dir}/anonymous-upload-${width}.png`,fullPage:true})}});
-test('200 percent equivalent browser layout preserves controls and PDF content',async({browser})=>{const context=await browser.newContext({viewport:{width:720,height:500},deviceScaleFactor:2});const page=await context.newPage();await overview(page);for(const path of ['/','/app/library','/app/documents/doc1?dialog=link','/app/documents/doc1/read','/app/documents/doc2/read','/app/documents/doc3/read']){await page.goto(path);await page.waitForTimeout(500);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),path).toBeTruthy()}await page.goto('/app/documents/doc1?dialog=link');await page.getByLabel('Link expiry').selectOption('custom');await page.screenshot({path:`${dir}/sharing-200-percent-layout.png`,fullPage:true});await context.close()});
-test('album order supports drag and drop as well as keyboard buttons',async({page})=>{await overview(page);await page.goto('/app/documents/doc3/edit');const before=await page.getByLabel('Caption',{exact:true}).first().inputValue();await page.locator('.album-edit img').first().dragTo(page.locator('.album-edit img').nth(1));await expect(page.getByLabel('Caption',{exact:true}).nth(1)).toHaveValue(before);await page.getByRole('button',{name:'Save changes',exact:true}).click();await expect(page.getByRole('link',{name:'Open reader',exact:true})).toBeVisible();expect((await readState(page)).documents.find((d:any)=>d.id==='doc3').images[1].caption).toBe(before)});
+import { test, expect } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
+import { PDFDocument } from 'pdf-lib';
+
+test('real publication formats reach a separate recipient and survive refresh', async ({ browser, baseURL }) => {
+  const author = await browser.newContext({ extraHTTPHeaders: { 'X-Forwarded-For': '192.0.2.20' } }), recipient = await browser.newContext({ extraHTTPHeaders: { 'X-Forwarded-For': '192.0.2.21' } });
+  const page = await author.newPage();
+  const origin = new URL(baseURL!).origin;
+  try {
+    const register = await author.request.post(baseURL + '/api/auth/register', { headers: { origin }, data: { name: 'Flow Author', email: `flow-${crypto.randomUUID()}@example.com`, password: 'correct-password' } });
+    expect(register.status()).toBe(201);
+    const pdf = await PDFDocument.create(); pdf.addPage().drawText('Shared durable PDF');
+    const image = await readFile('../back/tests/fixtures/album.png');
+    for (const [format, files] of [
+      ['pdf', [{ name: 'flow.pdf', mimeType: 'application/pdf', buffer: Buffer.from(await pdf.save()) }]],
+      ['epub', [{ name: 'flow.epub', mimeType: 'application/epub+zip', buffer: await readFile('../back/tests/fixtures/valid.epub') }]],
+      ['album', [{ name: 'first.png', mimeType: 'image/png', buffer: image }, { name: 'second.png', mimeType: 'image/png', buffer: image }]],
+    ] as const) {
+      await page.goto(baseURL + '/upload');
+      await page.locator('input[type=file]').setInputFiles([...files]);
+      await page.getByLabel('Title', { exact: true }).fill('Shared ' + format);
+      await page.getByRole('button', { name: 'Upload document', exact: true }).click();
+      await expect(page).toHaveURL(/\/upload\/complete\//);
+      const id = page.url().split('/').pop()!;
+      await page.goto(`${baseURL}/app/documents/${id}/links`);
+      await page.getByRole('button', { name: 'Create sharing link', exact: true }).click();
+      const dialog = page.getByRole('dialog');
+      await dialog.getByLabel('Link name').fill('Independent reader');
+      if (format === 'pdf') { await dialog.getByLabel('Require a password').check(); await dialog.getByLabel('Password', { exact: true }).fill('protected'); }
+      const created = page.waitForResponse(r => r.url().endsWith(`/api/files/${id}/links`) && r.request().method() === 'POST');
+      await dialog.getByRole('button', { name: 'Create link', exact: true }).click();
+      const response = await created; expect(response.status()).toBe(200); const link = await response.json();
+      await page.goto(`${baseURL}/share/${link.token}?preview=1`);
+      await page.getByRole('button', { name: 'Start reading', exact: true }).click();
+      if (format === 'pdf') await expect(page.locator('canvas').first()).toBeVisible();
+      else if (format === 'epub') await expect(page.getByText('Persistent EPUB content.', { exact: true })).toBeVisible();
+      else await expect(page.locator('.album-reader img').last()).toBeVisible();
+      const previewLinks = await author.request.get(`${baseURL}/api/files/${id}/links`);
+      expect((await previewLinks.json()).links.find((l: { id: string }) => l.id === link.id).used).toBe(0);
+      const reader = await recipient.newPage();
+      await reader.goto(`${baseURL}/share/${link.token}`);
+      if (format === 'pdf') { await expect(reader.getByLabel('Password', { exact: true })).toBeVisible(); await reader.getByLabel('Password', { exact: true }).fill('protected'); }
+      else await expect(reader.getByRole('heading', { name: 'Shared ' + format, exact: true })).toBeVisible();
+      await reader.getByRole('button', { name: 'Start reading', exact: true }).click();
+      await expect(reader).toHaveURL(/\/read$/);
+      if (format === 'pdf') await expect(reader.locator('canvas').first()).toBeVisible();
+      else if (format === 'epub') {
+        await expect(reader.getByText('Persistent EPUB content.', { exact: true })).toBeVisible();
+        await reader.locator('body').press('ArrowRight');
+        await expect(reader.getByText('Real second chapter.', { exact: true })).toBeVisible();
+      } else await expect(reader.locator('.album-reader img').last()).toBeVisible();
+      await reader.reload();
+      if (format === 'pdf') await expect(reader.locator('canvas').first()).toBeVisible();
+      else if (format === 'epub') await expect(reader.getByText('Persistent EPUB content.', { exact: true })).toBeVisible();
+      else await expect(reader.locator('.album-reader img').last()).toBeVisible();
+      const bytes = await recipient.request.get(`${baseURL}/api/share/${link.token}/file${format === "epub" ? "?content=1" : ""}`);
+      expect(bytes.status()).toBe(200);
+      await author.request.patch(`${baseURL}/api/files/${id}/links/${link.id}`, { headers: { origin }, data: { name: link.name, revoked: true } });
+      expect((await recipient.request.get(`${baseURL}/api/share/${link.token}/file`)).status()).toBe(410);
+      await reader.reload(); await expect(reader.getByText('Link unavailable', { exact: false }).first()).toBeVisible();
+      await reader.close();
+    }
+    await page.goto(baseURL + '/app/library');
+    expect(await page.evaluate(() => localStorage.getItem('framashare-prototype-v1'))).toBeNull();
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
+    expect(overflow).toBe(false);
+  } finally {
+    await author.request.delete(baseURL + '/api/auth/account', { headers: { origin } });
+    await author.close(); await recipient.close();
+  }
+});
+
+test('anonymous management works in a fresh browser and claim invalidates its token', async ({ browser, baseURL }) => {
+  const anonymous = await browser.newContext(), manager = await browser.newContext();
+  const page = await anonymous.newPage(), fresh = await manager.newPage();
+  const origin = new URL(baseURL!).origin;
+  let id = '', token = '';
+  try {
+    const pdf = await PDFDocument.create(); pdf.addPage().drawText('Anonymous publication');
+    await page.goto(baseURL + '/upload');
+    await page.locator('input[type=file]').setInputFiles({ name: 'anonymous.pdf', mimeType: 'application/pdf', buffer: Buffer.from(await pdf.save()) });
+    await page.getByRole('button', { name: 'Upload document', exact: true }).click();
+    await expect(page).toHaveURL(/\/upload\/complete\//); id = page.url().split('/').pop()!;
+    const managementUrl = await page.locator('.url').first().innerText(); token = managementUrl.split('/').pop()!;
+    await fresh.goto(managementUrl + '?edit=1');
+    await fresh.getByLabel('Title', { exact: true }).fill('Anonymous edited');
+    await fresh.getByRole('button', { name: 'Save changes', exact: true }).click();
+    await expect(fresh.getByRole('heading', { name: 'Anonymous edited', exact: true })).toBeVisible();
+    await fresh.goto(managementUrl + '/read'); await expect(fresh.locator('canvas').first()).toBeVisible();
+    const registered = await manager.request.post(baseURL + '/api/auth/register', { headers: { origin }, data: { name: 'Claim author', email: `claim-${crypto.randomUUID()}@example.com`, password: 'correct-password' } });
+    expect(registered.status()).toBe(201);
+    const claimed = await manager.request.post(`${baseURL}/api/manage/${token}/claim`, { headers: { origin } }); expect(claimed.status()).toBe(200);
+    expect((await anonymous.request.get(`${baseURL}/api/manage/${token}`)).status()).toBe(404);
+    await fresh.goto(baseURL + '/app/library'); await expect(fresh.getByText('Anonymous edited', { exact: true }).first()).toBeVisible();
+  } finally {
+    const deleted = await manager.request.delete(baseURL + '/api/auth/account', { headers: { origin } });
+    if (deleted.status() !== 204 && id && token) await anonymous.request.delete(`${baseURL}/api/files/${id}`, { headers: { origin, 'x-manage-token': token } });
+    await anonymous.close(); await manager.close();
+  }
+});
+
+test('cancel waits for server cleanup and prevents a competing upload', async ({ browser, baseURL }) => {
+  const context = await browser.newContext({ extraHTTPHeaders: { 'X-Forwarded-For': '192.0.2.40' } });
+  const page = await context.newPage(); const origin = new URL(baseURL!).origin;
+  let id = '', release!: () => void, received!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  const uploaded = new Promise<void>(resolve => { received = resolve; });
+  try {
+    const registered = await context.request.post(baseURL+'/api/auth/register',{headers:{origin},data:{name:'Cancel author',email:`cancel-${crypto.randomUUID()}@example.com`,password:'correct-password'}});
+    expect(registered.status()).toBe(201);
+    await page.route('**/api/files/upload', async route => {
+      const response = await route.fetch(); expect(response.status()).toBe(201); id = (await response.json()).id;
+      received(); await held; await route.fulfill({ response });
+    });
+    const pdf = await PDFDocument.create(); pdf.addPage().drawText('Cancel while response is held');
+    await page.goto(baseURL+'/upload'); await page.locator('input[type=file]').setInputFiles({name:'cancel.pdf',mimeType:'application/pdf',buffer:Buffer.from(await pdf.save())});
+    await page.getByRole('button',{name:'Upload document',exact:true}).click(); await uploaded;
+    await page.getByRole('button',{name:'Cancel upload',exact:true}).click();
+    await expect(page.getByRole('button',{name:'Upload document',exact:true})).toBeDisabled();
+    release();
+    await expect.poll(async () => (await context.request.get(`${baseURL}/api/files/${id}`)).status()).toBe(404);
+    await expect(page.getByRole('button',{name:'Upload document',exact:true})).toBeEnabled();
+    expect((await context.request.get(baseURL+'/api/files')).ok()).toBe(true);
+  } finally { release(); await context.request.delete(baseURL+'/api/auth/account',{headers:{origin}}); await context.close(); }
+});

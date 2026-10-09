@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import { currentUser, initializeSession } from './services/store';
+import { currentUser, initializeSession, loadPublicationRoute, loadAdmin, ui } from './services/store';
 
 const publicPage = () => 
     import('./views/PublicPage.vue'), account = () => 
@@ -38,8 +38,13 @@ router.addRoute({ path: '/logo-preview', component: () =>
     import('./views/LogoPreviewPage.vue') });
 
 router.beforeEach(async to => { await initializeSession();
- if (to.path === '/overview' || to.path.startsWith('/admin/')) return '/';
- if (to.path === '/upload' && !currentUser()) return { path: '/sign-in', query: { return: to.fullPath } }; if (to.path.startsWith('/app/') && !currentUser()) return { path: '/sign-in', query: { return: to.fullPath } };
- if (to.path.startsWith('/admin/') && currentUser()?.role !== 'admin')
-    return { path: '/overview', query: { role: 'admin' } } });
+ if (to.path === '/overview') return '/';
+ if (to.path.startsWith('/share/') || to.path.startsWith('/manage/')) {
+   try { await loadPublicationRoute(to.path, String(to.params.token), typeof to.query.manage === 'string' ? to.query.manage : undefined); } catch (e) { ui.accessError = (e as Error).message; }
+ }
+ if (to.path.startsWith('/app/') && !currentUser()) return { path: '/sign-in', query: { return: to.fullPath } };
+ if (to.path.startsWith('/admin/')) {
+   if (currentUser()?.role !== 'admin') return '/';
+   await loadAdmin();
+ }  });
 

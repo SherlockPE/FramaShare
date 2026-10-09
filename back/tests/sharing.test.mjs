@@ -29,6 +29,12 @@ test('all formats, anonymous claim, concurrent limits, revocation, moderation an
       const response = await send('POST', `/api/files/${d.id}/links`, { name: 'Readers', ...settings }, cookie); assert.equal(response.statusCode, 200, response.body); return response.json();
     };
     const l = await makeLink({ limit: 1, password: 'read-password', allowDownload: false });
+    const gate = await send('GET', `/api/share/${l.token}`);
+    assert.equal(gate.json().document.title,'Protected publication');
+    assert.equal(gate.json().document.description,'');
+    const preview = await send('GET', `/api/share/${l.token}`,undefined,cookie);
+    assert.equal(preview.json().document.title,d.title); assert.equal(preview.json().document.source,d.source);
+    assert.equal(await prisma.session.count({where:{linkId:l.id}}),0);
     assert.equal((await send('GET', `/api/share/${l.token}/file`)).statusCode, 401);
     assert.equal((await send('POST', `/api/share/${l.token}/session`, { password: 'wrong' })).statusCode, 403);
     const simultaneous = await Promise.all([1,2].map(() => send('POST', `/api/share/${l.token}/session`, { password: 'read-password' })));
@@ -81,6 +87,13 @@ test('all formats, anonymous claim, concurrent limits, revocation, moderation an
     const anonymous = anonymousResponse.json(); documents.push(anonymous.id); assert.equal(anonymous.manageToken.length,64);
     assert.equal((await send('GET',anonymous.source)).statusCode,401);
     assert.equal((await send('GET',`/api/manage/${anonymous.manageToken}`)).statusCode,200);
+    const managedLinkResponse=await send('POST',`/api/files/${anonymous.id}/links`,{name:'Managed preview',password:'manage-password'},'',{'x-manage-token':anonymous.manageToken});
+    assert.equal(managedLinkResponse.statusCode,200,managedLinkResponse.body);
+    const managedLink=managedLinkResponse.json();
+    const managedPreview=await send('GET',`/api/share/${managedLink.token}`,undefined,'',{'x-manage-token':anonymous.manageToken});
+    assert.equal(managedPreview.json().document.manageToken,anonymous.manageToken);
+    assert.equal((await send('GET',managedPreview.json().document.source)).statusCode,200);
+    assert.equal((await send('GET',`/api/share/${managedLink.token}`,undefined,'',{'x-manage-token':'fake'})).json().document.title,'Protected publication');
     await prisma.user.update({where:{id:users[0]},data:{quota:0}});
     assert.equal((await send('POST',`/api/manage/${anonymous.manageToken}/claim`,undefined,cookie)).statusCode,409);
     await prisma.user.update({where:{id:users[0]},data:{quota:1000000000}});

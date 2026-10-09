@@ -20,6 +20,7 @@ import {
   notify,
   copyLink,
   delay,
+  saveLink,
   files,
   registerFiles,
   linkDenial,
@@ -67,7 +68,7 @@ async function save() {
   saving.value = true;
   try {
     if (!title.value.trim()) throw Error("Add a title.");
-    await updateDocument(doc.value.id, title.value.trim(), description.value);
+    await updateDocument(doc.value.id, title.value.trim(), description.value, doc.value.format === "album" ? images.value : undefined);
     notify("Publication updated");
     router.push(base.value);
   } catch (e) {
@@ -90,7 +91,7 @@ async function claim() {
   }
   try {
     await delay();
-    const d = claimDocument(String(route.params.token), currentUser()!.id);
+    const d = await claimDocument(String(route.params.token), currentUser()!.id);
     notify("Publication added to your library");
     router.push("/app/documents/" + d.id);
   } catch (e) {
@@ -105,6 +106,11 @@ async function remove() {
     notify("Publication deleted");
     router.push(managed.value ? "/" : "/app/library");
   } catch (e) { error.value = (e as Error).message; deleting.value = false; }
+}
+async function revokeLink() {
+  if (!revoke.value) return;
+  try { const { password, ...settings } = revoke.value; await saveLink(revoke.value.documentId, { ...settings, revoked: true }, revoke.value.id); revoke.value = undefined; notify('Sharing link revoked'); }
+  catch (e) { error.value = (e as Error).message; }
 }
 function saved(link: SharingLink) {
   create.value = false;
@@ -423,11 +429,7 @@ function downloadManagement() {
           <button class="button secondary" @click="revoke = undefined">Cancel</button
           ><button
             class="button danger"
-            @click="
-              revoke.revoked = true;
-              revoke = undefined;
-              notify('Sharing link revoked');
-            "
+            @click="revokeLink"
           >
             Revoke link
           </button>
