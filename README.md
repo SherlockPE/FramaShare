@@ -243,4 +243,7 @@ pnpm --filter frontend exec playwright test
 ## 👥 Authors & License
 
 - **Fabricio López Reyes** ([@SherlockPE](https://github.com/SherlockPE))
+- **Jakub Siuda** ([@siudajakub](https://github.com/siudajakub)) 
+- **Alvaro Campos** ([@alan-campos-4](https://github.com/alan-campos-4))
+- **Ignacio Castilla López** ([@ignaccas](https://github.com/ignaccas))
 - Licensed under the [AGPL-3.0-or-later](LICENSE) License.
